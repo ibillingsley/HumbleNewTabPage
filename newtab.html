@@ -11,7 +11,8 @@ body {
 	margin: 0;
 	overflow-x: hidden;
 	font-family: sans-serif;
-	line-height: 1.85;
+	font-size: 90%;
+	line-height: 2;
 	white-space: nowrap;
 	-webkit-user-select: none;
 }
@@ -22,7 +23,6 @@ ul {
 	margin: 0;
 	padding: 0;
 	list-style: none;
-	padding: 1px;
 }
 a + ul {
 	padding-left: 22px;
@@ -48,6 +48,7 @@ a {
 	background-repeat: no-repeat;
 	padding: 5px 10px 5px 35px;
 	border-radius: 3px;
+	margin: 1px;
 }
 a:hover, .select:hover {
 	color: HighlightText;
@@ -99,7 +100,7 @@ function render(node, target, fetch, style) {
 	var a = document.createElement('a');
 	a.innerText = node.title;
 	if (node.url) {
-		a.href = node.url
+		a.href = node.url;
 		a.style.backgroundImage = 'url(chrome://favicon/' + node.url + ')';
 	}
 	
@@ -111,9 +112,7 @@ function render(node, target, fetch, style) {
 		if (localStorage['open.' + node.id]) {
 			a.className = (style || 'folder') + ' open';
 			if (fetch)
-				fetch(function(result) {
-					renderAll(result, target);
-				});
+				fetch(function(result) { renderAll(result, target); });
 			else
 				renderAll(node.children, target);
 		} else
@@ -126,12 +125,12 @@ function render(node, target, fetch, style) {
 	}
 }
 
-function renderAll(nodes, target, hideFolders) {
+function renderAll(nodes, target) {
 	var empty = true;
 	var ul = document.createElement('ul');
 	for (var i = 0; i < nodes.length; i++) {
 		var node = nodes[i];
-		if (hideFolders && !node.url)
+		if (!node.children && !node.url)
 			continue;
 		
 		empty = false;
@@ -158,9 +157,7 @@ function toggle(node, anchor, fetch, style) {
 		anchor.className = (style || 'folder') + ' open';
 		localStorage['open.' + node.id] = true;
 		if (fetch)
-			fetch(function(result) {
-				renderAll(result, target);
-			});
+			fetch(function(result) { renderAll(result, target); });
 		else
 			renderAll(node.children, target);
 	}
@@ -197,7 +194,7 @@ function init() {
 					favs.innerHTML = '';
 					localStorage['favorites'] = event.target.folderId;
 					chrome.bookmarks.getChildren(event.target.folderId, function(result) {
-						renderAll(result, favs, true);
+						renderAll(result, favs);
 						favs.appendChild(choose);
 					});
 				}
@@ -215,7 +212,7 @@ function init() {
 	// show favorites
 	if (localStorage['favorites']) {
 		chrome.bookmarks.getChildren(localStorage['favorites'], function(result) {
-			renderAll(result, favs, true);
+			renderAll(result, favs);
 			favs.appendChild(choose);
 		});
 	} else
@@ -255,7 +252,7 @@ function init() {
 	
 	window.onresize = function(event) {
 		favs.style.width = (document.body.clientWidth * localStorage['split']) + 'px';
-	}
+	};
 
 }
 
