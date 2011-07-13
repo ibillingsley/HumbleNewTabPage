@@ -1,0 +1,271 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>New Tab</title>
+<link rel="shortcut icon" href="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==" />
+<style>
+body {
+	display: -webkit-box;
+	-webkit-box-orient: horizontal;
+	margin: 0;
+	overflow-x: hidden;
+	font-family: sans-serif;
+	line-height: 1.85;
+	white-space: nowrap;
+	-webkit-user-select: none;
+}
+html, body, body > div {
+	height: 100%;
+}
+ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	padding: 1px;
+}
+a + ul {
+	padding-left: 22px;
+}
+#bookmarks {
+	-webkit-box-flex: 1;
+}
+#favorites,
+#bookmarks {
+	box-sizing: border-box;
+	padding: 85px 0;
+}
+#favorites > *,
+#bookmarks > * {
+	margin-left: 85px;
+	overflow: hidden;
+}
+a {
+	text-decoration: none;
+	color: inherit;
+	cursor: pointer;
+	background-position: 10px 50%;
+	background-repeat: no-repeat;
+	padding: 5px 10px 5px 35px;
+	border-radius: 3px;
+}
+a:hover, .select:hover {
+	color: HighlightText;
+	background-color: Highlight;
+}
+#splitter {
+	height: auto;
+	width: 5px;
+	margin: 90px 0;
+	cursor: e-resize;
+	background-color: WindowFrame;
+	opacity: 0.05;
+	border-radius: 3px;
+}
+#splitter:hover {
+	opacity: 0.1;
+}
+.select {
+	padding-left: 10px;
+}
+ul + div.selectwrap {
+	position: relative;
+	top: 1em;
+	color: GrayText;
+	opacity: 0.6;
+}
+.selectwrap {
+	padding: 1px;
+}
+.choose * {
+	cursor: crosshair;
+}
+.choose .folder,
+.choose .select {
+	outline: 1px dotted Highlight;
+}
+.folder {
+	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjczRUY0NUFGQUI4NjExRTBCMUE5OTM1ODA5RkE3RDZDIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjczRUY0NUIwQUI4NjExRTBCMUE5OTM1ODA5RkE3RDZDIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6NzNFRjQ1QURBQjg2MTFFMEIxQTk5MzU4MDlGQTdENkMiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6NzNFRjQ1QUVBQjg2MTFFMEIxQTk5MzU4MDlGQTdENkMiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz7EsyUCAAAAi0lEQVR42mL8//8/AyWAiYFCQBsDGBkZI4BYFIgZkDEpLrAA4gogNiDXCyDrJgJxOhCbkmMAKGoeAXE7EOcBsSxOE0DRiI6BYAKSElUg3gXEctjUsuDxAggoAHEdECcC8VNSvSAHxOVAPAmXZhDA54JcIJ4JxBfwRgOOMIgAYjFi1DIO07xACgAIMACgvlAfwCgYdAAAAABJRU5ErkJggg==);
+}
+.folder.open {
+	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjM5N0QwNTJDQUI4NjExRTBCRTU1RDM5Mzc4NjQwRjVCIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjM5N0QwNTJEQUI4NjExRTBCRTU1RDM5Mzc4NjQwRjVCIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6Mzk3RDA1MkFBQjg2MTFFMEJFNTVEMzkzNzg2NDBGNUIiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6Mzk3RDA1MkJBQjg2MTFFMEJFNTVEMzkzNzg2NDBGNUIiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz5MiKKUAAAAX0lEQVR42mL8//8/AyWAiYFCMBwNYGRkRMe5QLwNpwmgWEDGaCAXiL+BMLo6uHo8BuRDNd8jxwBkzXgNwBaIIM3tQPwCFCSEApEFi5gHlJZAEjuIywDG0aRMuQEAAQYANjRtmRna5N4AAAAASUVORK5CYII=);
+}
+.recent {
+	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAASCAYAAAC5DOVpAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9kJFRQTIaWbePsAAAGiSURBVDjLY2CgB1AImCEAxO+hWIBSwxIiqhb9j6ha/B/EptSw86t3rvoPwiA2KRrZgFgNiM2A2AGIK4H4/8e3y8AYxAZiP6g6FkKGzdIKn/HfLm36f91IsMb/DdOn////bcb//99n/K8HsqEG/oDi+0A8FZdhK0PKp/5/9awLaEAHFHeiYJDcs8fd/1887fpfO3USyOB3QMyIzTA+IJ5tkzr1/9FTTf//f62E4ioU/O9L9f+KSX3/FQNnPAaqt8bpVTmfCYxABUUaYdP+HDtV9v//lywgzobjr29z/3vlTwC56DgQKxGOCP9poAD+tHVv/v//n6OBOAaOz53PhIWbJbGxqqcdMeX/p5cB//9/8oFiX6BhvmDaJasbZFgssYaVxtbUATXa/r9wPvB/XG3D/8jKpv9nzgQDxez+N04rABk2l1jDVi5aF/l/3urY/8pB0/4B8SyloOnTlYOm/+iak/7/9Bl3kGF3sMYiFsNOa0VM+q8WMvW8VXKXJZK4DhDvM0/sARn2E4i5iMrcQFdEAGlOLHIsQJwKyiXUKkkYhiYAAAc2NpqD+j2EAAAAAElFTkSuQmCC);
+}
+</style>
+<script>
+function render(node, target, fetch, style) {
+	var a = document.createElement('a');
+	a.innerText = node.title;
+	if (node.url) {
+		a.href = node.url
+		a.style.backgroundImage = 'url(chrome://favicon/' + node.url + ')';
+	}
+	
+	target.appendChild(a);
+	
+	// folder
+	if (node.children) {
+		a.folderId = node.id;
+		if (localStorage['open.' + node.id]) {
+			a.className = (style || 'folder') + ' open';
+			if (fetch)
+				fetch(function(result) {
+					renderAll(result, target);
+				});
+			else
+				renderAll(node.children, target);
+		} else
+			a.className = style || 'folder';
+		
+		a.onclick = function() {
+			toggle(node, a, fetch, style);
+			return false;
+		};
+	}
+}
+
+function renderAll(nodes, target, hideFolders) {
+	var empty = true;
+	var ul = document.createElement('ul');
+	for (var i = 0; i < nodes.length; i++) {
+		var node = nodes[i];
+		if (hideFolders && !node.url)
+			continue;
+		
+		empty = false;
+		var li = document.createElement('li');
+		render(node, li);
+		ul.appendChild(li);
+	}
+	if (!empty)
+		target.appendChild(ul);
+}
+
+function toggle(node, anchor, fetch, style) {
+	if (document.onclick)
+		return;// dont toggle while selecting folder
+	
+	var target = anchor.parentNode;
+	if (anchor.nextSibling) {
+		// close folder
+		target.removeChild(anchor.nextSibling);
+		anchor.className = style || 'folder';
+		localStorage.removeItem('open.' + node.id);
+	} else {
+		// open folder
+		anchor.className = (style || 'folder') + ' open';
+		localStorage['open.' + node.id] = true;
+		if (fetch)
+			fetch(function(result) {
+				renderAll(result, target);
+			});
+		else
+			renderAll(node.children, target);
+	}
+}
+
+function init() {
+
+	// show bookmarks
+	var bookmarks = document.getElementById('bookmarks');
+	chrome.bookmarks.getTree(function(result) {
+		renderAll(result[0].children, bookmarks);
+		// recent bookmarks
+		render({ title: 'Recent', children: true }, bookmarks, function(callback) {
+			chrome.bookmarks.getRecent(50, function(result) {
+				callback(result);
+			});
+		}, 'recent');
+	});
+	
+	// choose folder link
+	var favs = document.getElementById('favorites');
+	var choose = document.createElement('div');
+	choose.className = 'selectwrap';
+	var a = document.createElement('a');
+	a.innerText = 'Choose Folder';
+	a.className = 'select';
+	a.onclick = function() {
+		if (document.onclick)
+			return;
+		
+		setTimeout(function() {
+			document.onclick = function(event) {
+				if (event.target.folderId) {
+					favs.innerHTML = '';
+					localStorage['favorites'] = event.target.folderId;
+					chrome.bookmarks.getChildren(event.target.folderId, function(result) {
+						renderAll(result, favs, true);
+						favs.appendChild(choose);
+					});
+				}
+				
+				document.onclick = null;
+				document.body.className = '';
+				return false;
+			};
+		}, 0);
+		document.body.className = 'choose';
+		return false;
+	};
+	choose.appendChild(a);
+	
+	// show favorites
+	if (localStorage['favorites']) {
+		chrome.bookmarks.getChildren(localStorage['favorites'], function(result) {
+			renderAll(result, favs, true);
+			favs.appendChild(choose);
+		});
+	} else
+		favs.appendChild(choose);
+	
+	// restore split position
+	if (!localStorage['split']) {
+		favs.style.width = (document.body.clientWidth * .5) + 'px';
+		localStorage['split'] = .5;
+	} else {
+		favs.style.width = (document.body.clientWidth * localStorage['split']) + 'px';
+	}
+	
+	// setup splitter
+	var splitter = document.getElementById('splitter');
+	splitter.onmousedown = function(downevent) {
+		var downnwidth = parseInt(favs.style.width);
+	
+		document.onmousemove = function(event) {
+			favs.style.width = Math.max(Math.min((downnwidth + event.clientX - downevent.clientX), document.body.clientWidth - 5), 0) + 'px';
+		};
+		
+		document.onmouseup = function(event) {
+			document.onmouseup = null;
+			document.onmousemove = null;
+			localStorage['split'] = parseInt(favs.style.width) / document.body.clientWidth;
+		};
+		
+		return false;
+	};
+	
+	splitter.oncontextmenu = function(event) {
+		favs.style.width = (document.body.clientWidth * .5) + 'px';
+		localStorage['split'] = .5;
+		return false;
+	};
+	
+	window.onresize = function(event) {
+		favs.style.width = (document.body.clientWidth * localStorage['split']) + 'px';
+	}
+
+}
+
+document.addEventListener('DOMContentLoaded', init);
+
+</script>
+</head>
+<body>
+<div id="favorites"></div>
+<div id="splitter"></div>
+<div id="bookmarks"></div>
+</body>
+</html>
