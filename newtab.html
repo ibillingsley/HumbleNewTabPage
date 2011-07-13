@@ -220,10 +220,10 @@ function init() {
 	
 	// restore split position
 	if (!localStorage['split']) {
-		favs.style.width = (document.body.clientWidth * .5) + 'px';
+		favs.style.width = (window.innerWidth * .5) + 'px';
 		localStorage['split'] = .5;
 	} else {
-		favs.style.width = (document.body.clientWidth * localStorage['split']) + 'px';
+		favs.style.width = (window.innerWidth * localStorage['split']) + 'px';
 	}
 	
 	// setup splitter
@@ -232,26 +232,26 @@ function init() {
 		var downnwidth = parseInt(favs.style.width);
 	
 		document.onmousemove = function(event) {
-			favs.style.width = Math.max(Math.min((downnwidth + event.clientX - downevent.clientX), document.body.clientWidth - 5), 0) + 'px';
+			favs.style.width = Math.max(Math.min((downnwidth + event.clientX - downevent.clientX), window.innerWidth - 5), 0) + 'px';
 		};
 		
 		document.onmouseup = function(event) {
 			document.onmouseup = null;
 			document.onmousemove = null;
-			localStorage['split'] = parseInt(favs.style.width) / document.body.clientWidth;
+			localStorage['split'] = parseInt(favs.style.width) / window.innerWidth;
 		};
 		
 		return false;
 	};
 	
 	splitter.oncontextmenu = function(event) {
-		favs.style.width = (document.body.clientWidth * .5) + 'px';
+		favs.style.width = (window.innerWidth * .5) + 'px';
 		localStorage['split'] = .5;
 		return false;
 	};
 	
 	window.onresize = function(event) {
-		favs.style.width = (document.body.clientWidth * localStorage['split']) + 'px';
+		favs.style.width = (window.innerWidth * localStorage['split']) + 'px';
 	};
 
 }
