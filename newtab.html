@@ -11,7 +11,7 @@ body {
 	margin: 0;
 	overflow-x: hidden;
 	font-family: sans-serif;
-	font-size: 90%;
+	font-size: 62.5%;
 	line-height: 2;
 	white-space: nowrap;
 	-webkit-user-select: none;
@@ -20,12 +20,12 @@ html, body, body > div {
 	height: 100%;
 }
 ul {
-	margin: 0;
-	padding: 0;
+	margin: -1px;
+	padding: 1px;
 	list-style: none;
 }
 a + ul {
-	padding-left: 22px;
+	padding-left: 2.5em;
 }
 #bookmarks {
 	-webkit-box-flex: 1;
@@ -33,31 +33,31 @@ a + ul {
 #favorites,
 #bookmarks {
 	box-sizing: border-box;
-	padding: 85px 0;
+	padding: 8.5em 0;
 }
 #favorites > *,
 #bookmarks > * {
-	margin-left: 85px;
+	margin-left: 8.5em;
 	overflow: hidden;
 }
 a {
+	font-size: 1.4em;
 	text-decoration: none;
 	color: inherit;
 	cursor: pointer;
-	background-position: 10px 50%;
+	background-position: .8em 50%;
 	background-repeat: no-repeat;
-	padding: 5px 10px 5px 35px;
+	padding: .4em .8em .4em 2.5em;
 	border-radius: 3px;
-	margin: 1px;
 }
-a:hover, .select:hover {
+a:hover, .select .choose a {
 	color: HighlightText;
 	background-color: Highlight;
 }
 #splitter {
 	height: auto;
 	width: 5px;
-	margin: 90px 0;
+	margin: 9em 0;
 	cursor: e-resize;
 	background-color: WindowFrame;
 	opacity: 0.05;
@@ -66,23 +66,20 @@ a:hover, .select:hover {
 #splitter:hover {
 	opacity: 0.1;
 }
-.select {
-	padding-left: 10px;
+.choose a {
+	padding-left: .8em;
 }
-ul + div.selectwrap {
+li + .choose {
 	position: relative;
-	top: 1em;
+	top: 1.5em;
+	margin-bottom: 1.5em;
 	color: GrayText;
 	opacity: 0.6;
 }
-.selectwrap {
-	padding: 1px;
-}
-.choose * {
+.select * {
 	cursor: crosshair;
 }
-.choose .folder,
-.choose .select {
+.select .folder {
 	outline: 1px dotted Highlight;
 }
 .folder {
@@ -97,14 +94,14 @@ ul + div.selectwrap {
 </style>
 <script>
 function render(node, target, fetch, style) {
+	var li = document.createElement('li');
 	var a = document.createElement('a');
 	a.innerText = node.title;
 	if (node.url) {
 		a.href = node.url;
 		a.style.backgroundImage = 'url(chrome://favicon/' + node.url + ')';
 	}
-	
-	target.appendChild(a);
+	li.appendChild(a);
 	
 	// folder
 	if (node.children) {
@@ -112,9 +109,9 @@ function render(node, target, fetch, style) {
 		if (localStorage['open.' + node.id]) {
 			a.className = (style || 'folder') + ' open';
 			if (fetch)
-				fetch(function(result) { renderAll(result, target); });
+				fetch(function(result) { renderAll(result, li); });
 			else
-				renderAll(node.children, target);
+				renderAll(node.children, li);
 		} else
 			a.className = style || 'folder';
 		
@@ -123,38 +120,36 @@ function render(node, target, fetch, style) {
 			return false;
 		};
 	}
+	target.appendChild(li);
+	return li;
 }
 
 function renderAll(nodes, target) {
-	var empty = true;
 	var ul = document.createElement('ul');
 	for (var i = 0; i < nodes.length; i++) {
 		var node = nodes[i];
 		if (!node.children && !node.url)
 			continue;
 		
-		empty = false;
-		var li = document.createElement('li');
-		render(node, li);
-		ul.appendChild(li);
+		render(node, ul);
 	}
-	if (!empty)
-		target.appendChild(ul);
+	target.appendChild(ul);
+	return ul;
 }
 
-function toggle(node, anchor, fetch, style) {
+function toggle(node, a, fetch, style) {
 	if (document.onclick)
 		return;// dont toggle while selecting folder
 	
-	var target = anchor.parentNode;
-	if (anchor.nextSibling) {
+	var target = a.parentNode;
+	if (a.nextSibling) {
 		// close folder
-		target.removeChild(anchor.nextSibling);
-		anchor.className = style || 'folder';
+		target.removeChild(a.nextSibling);
+		a.className = style || 'folder';
 		localStorage.removeItem('open.' + node.id);
 	} else {
 		// open folder
-		anchor.className = (style || 'folder') + ' open';
+		a.className = (style || 'folder') + ' open';
 		localStorage['open.' + node.id] = true;
 		if (fetch)
 			fetch(function(result) { renderAll(result, target); });
@@ -168,9 +163,9 @@ function init() {
 	// show bookmarks
 	var bookmarks = document.getElementById('bookmarks');
 	chrome.bookmarks.getTree(function(result) {
-		renderAll(result[0].children, bookmarks);
+		var ul = renderAll(result[0].children, bookmarks);
 		// recent bookmarks
-		render({ title: 'Recent', children: true }, bookmarks, function(callback) {
+		render({ title: 'Recent', children: true }, ul, function(callback) {
 			chrome.bookmarks.getRecent(50, function(result) {
 				callback(result);
 			});
@@ -179,11 +174,10 @@ function init() {
 	
 	// choose folder link
 	var favs = document.getElementById('favorites');
-	var choose = document.createElement('div');
-	choose.className = 'selectwrap';
+	var choose = document.createElement('li');
+	choose.className = 'choose';
 	var a = document.createElement('a');
 	a.innerText = 'Choose Folder';
-	a.className = 'select';
 	a.onclick = function() {
 		if (document.onclick)
 			return;
@@ -194,17 +188,15 @@ function init() {
 					favs.innerHTML = '';
 					localStorage['favorites'] = event.target.folderId;
 					chrome.bookmarks.getChildren(event.target.folderId, function(result) {
-						renderAll(result, favs);
-						favs.appendChild(choose);
+						renderAll(result, favs).appendChild(choose);
 					});
 				}
-				
 				document.onclick = null;
 				document.body.className = '';
 				return false;
 			};
 		}, 0);
-		document.body.className = 'choose';
+		document.body.className = 'select';
 		return false;
 	};
 	choose.appendChild(a);
@@ -212,12 +204,11 @@ function init() {
 	// show favorites
 	if (localStorage['favorites']) {
 		chrome.bookmarks.getChildren(localStorage['favorites'], function(result) {
-			renderAll(result, favs);
-			favs.appendChild(choose);
+			renderAll(result, favs).appendChild(choose);
 		});
 	} else
-		favs.appendChild(choose);
-	
+		renderAll([], favs).appendChild(choose);
+
 	// restore split position
 	if (!localStorage['split']) {
 		favs.style.width = (window.innerWidth * .5) + 'px';
