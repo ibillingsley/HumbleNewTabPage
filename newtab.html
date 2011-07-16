@@ -60,11 +60,11 @@ a:hover, .select .choose a {
 	margin: 9em 0;
 	cursor: e-resize;
 	background-color: WindowFrame;
-	opacity: 0.05;
+	opacity: 0.1;
 	border-radius: 3px;
 }
 #splitter:hover {
-	opacity: 0.1;
+	opacity: 0.2;
 }
 .choose a {
 	padding-left: .8em;
@@ -128,10 +128,8 @@ function renderAll(nodes, target) {
 	var ul = document.createElement('ul');
 	for (var i = 0; i < nodes.length; i++) {
 		var node = nodes[i];
-		if (!node.children && !node.url)
-			continue;
-		
-		render(node, ul);
+		if (node.children || node.url)
+			render(node, ul);
 	}
 	target.appendChild(ul);
 	return ul;

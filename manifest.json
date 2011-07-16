@@ -2,10 +2,11 @@
 	"name" : "New Tab + Bookmark Tree",
 	"version" : "1.0",
 	"description" : "Redesigned New Tab page featuring a bookmark tree and favorites folder",
-	// "icons" :
-	// {
-		// "128" : "icon_128.png"
-	// },
+	"icons" :
+	{
+		"128" : "icon_128.png",
+		"48" : "icon_48.png"
+	},
 	"permissions" : [
 		"bookmarks",
 		"chrome://favicon/"
