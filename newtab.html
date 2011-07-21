@@ -16,8 +16,25 @@ body {
 	white-space: nowrap;
 	-webkit-user-select: none;
 }
-html, body, body > div {
+html, body,
+#favorites,
+#bookmarks,
+#splitter {
 	height: 100%;
+}
+#bookmarks {
+	-webkit-box-flex: 1;
+}
+#favorites,
+#bookmarks {
+	box-sizing: border-box;
+	padding: 85px 0;
+	min-width: 1px;
+}
+#favorites > *,
+#bookmarks > * {
+	margin-left: 85px;
+	overflow: hidden;
 }
 ul {
 	margin: -1px;
@@ -27,37 +44,41 @@ ul {
 a + ul {
 	padding-left: 2.5em;
 }
-#bookmarks {
-	-webkit-box-flex: 1;
-}
-#favorites,
-#bookmarks {
-	box-sizing: border-box;
-	padding: 8.5em 0;
-}
-#favorites > *,
-#bookmarks > * {
-	margin-left: 8.5em;
-	overflow: hidden;
-}
 a {
 	font-size: 1.4em;
 	text-decoration: none;
 	color: inherit;
 	cursor: pointer;
-	background-position: .8em 50%;
+	background-position: 0 50%;
 	background-repeat: no-repeat;
-	padding: .4em .8em .4em 2.5em;
-	border-radius: 3px;
+	padding-left: 24px;
+	border: solid transparent;
+	border-width: .4em .8em;
+	border-radius: .3em;
 }
 a:hover, .select .choose a {
 	color: HighlightText;
 	background-color: Highlight;
 }
+.choose a {
+	padding-left: 0;
+}
+li + .choose {
+	position: relative;
+	top: 1.5em;
+	margin-bottom: 1.5em;
+	color: GrayText;
+}
+.select * {
+	cursor: crosshair;
+}
+.select .folder {
+	outline: 1px dotted Highlight;
+}
 #splitter {
 	height: auto;
 	width: 5px;
-	margin: 9em 0;
+	margin: 90px 0;
 	cursor: e-resize;
 	background-color: WindowFrame;
 	opacity: 0.1;
@@ -66,21 +87,34 @@ a:hover, .select .choose a {
 #splitter:hover {
 	opacity: 0.2;
 }
-.choose a {
-	padding-left: .8em;
+#options, #options_button {
+	position: absolute;
+	top: 0;
+	right: 0;
 }
-li + .choose {
-	position: relative;
-	top: 1.5em;
-	margin-bottom: 1.5em;
-	color: GrayText;
-	opacity: 0.6;
+#options {
+	display: none;
+	padding: 1em;
+	color: WindowText;
+	background-color: Window;
+	border: solid WindowFrame;
+	border-width: 0 0 1px 1px;
+	border-bottom-left-radius: .3em;
 }
-.select * {
-	cursor: crosshair;
+#options.open {
+	display: block;
 }
-.select .folder {
-	outline: 1px dotted Highlight;
+#options_button:hover {
+	opacity: 1;
+}
+label {
+	display: block;
+	font-size: 1.4em;
+	text-align: right;
+}
+input {
+	width: 150px;
+	margin-left: 1em;
 }
 .folder {
 	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjczRUY0NUFGQUI4NjExRTBCMUE5OTM1ODA5RkE3RDZDIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjczRUY0NUIwQUI4NjExRTBCMUE5OTM1ODA5RkE3RDZDIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6NzNFRjQ1QURBQjg2MTFFMEIxQTk5MzU4MDlGQTdENkMiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6NzNFRjQ1QUVBQjg2MTFFMEIxQTk5MzU4MDlGQTdENkMiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz7EsyUCAAAAi0lEQVR42mL8//8/AyWAiYFCQBsDGBkZI4BYFIgZkDEpLrAA4gogNiDXCyDrJgJxOhCbkmMAKGoeAXE7EOcBsSxOE0DRiI6BYAKSElUg3gXEctjUsuDxAggoAHEdECcC8VNSvSAHxOVAPAmXZhDA54JcIJ4JxBfwRgOOMIgAYjFi1DIO07xACgAIMACgvlAfwCgYdAAAAABJRU5ErkJggg==);
@@ -91,8 +125,33 @@ li + .choose {
 .recent {
 	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAASCAYAAAC5DOVpAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9kJFRQTIaWbePsAAAGiSURBVDjLY2CgB1AImCEAxO+hWIBSwxIiqhb9j6ha/B/EptSw86t3rvoPwiA2KRrZgFgNiM2A2AGIK4H4/8e3y8AYxAZiP6g6FkKGzdIKn/HfLm36f91IsMb/DdOn////bcb//99n/K8HsqEG/oDi+0A8FZdhK0PKp/5/9awLaEAHFHeiYJDcs8fd/1887fpfO3USyOB3QMyIzTA+IJ5tkzr1/9FTTf//f62E4ioU/O9L9f+KSX3/FQNnPAaqt8bpVTmfCYxABUUaYdP+HDtV9v//lywgzobjr29z/3vlTwC56DgQKxGOCP9poAD+tHVv/v//n6OBOAaOz53PhIWbJbGxqqcdMeX/p5cB//9/8oFiX6BhvmDaJasbZFgssYaVxtbUATXa/r9wPvB/XG3D/8jKpv9nzgQDxez+N04rABk2l1jDVi5aF/l/3urY/8pB0/4B8SyloOnTlYOm/+iak/7/9Bl3kGF3sMYiFsNOa0VM+q8WMvW8VXKXJZK4DhDvM0/sARn2E4i5iMrcQFdEAGlOLHIsQJwKyiXUKkkYhiYAAAc2NpqD+j2EAAAAAElFTkSuQmCC);
 }
+#options_button {
+	background: transparent url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2RpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDpDODZERDRCMTQ0QjBFMDExOTdCMkM5RTYxMkM5NkQ1QiIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDpCOUREMTJCOEIwNDQxMUUwOUQ5Qzk5MzRCRjNFMDY3NCIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDpCOUREMTJCN0IwNDQxMUUwOUQ5Qzk5MzRCRjNFMDY3NCIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IFdpbmRvd3MiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpDODZERDRCMTQ0QjBFMDExOTdCMkM5RTYxMkM5NkQ1QiIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpDODZERDRCMTQ0QjBFMDExOTdCMkM5RTYxMkM5NkQ1QiIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/Pi0txogAAALJSURBVHjafJTNa1NREMVvPvrSlyZNmg9iCLSbSkmDK6ELQYSCIiiKUhCEQnUjFkQQlP4HLtwIggtXwYVQEIRQV64KoiApunJdLKmBNC1tU5LapvF3rnmhttULw3v3ztwzZ87Me76RkRHzrxUMBocdx3nJ6y/W7P7+fvVozPLy8p/Y/4CYWCw2l0gkrnQ6HbO+vl7Z3Nx80G63T473Xnw+n/H7/ePYJMHzfX19tXg8HslkMkZABwcHkWazGYOZQ8wU+0Xs+zEgShgeHBz8ytPZ29t7DKMA+1x/f7/1w24GkFv4GvjSqnVra0u6VHtAZDADAwPpbDbrRCIRgxbDYui6rgkEAhYIdgZQF3auzra3tx2YJ/4C0sK5FAqFitFodMY7UwJviZlMZcog9I47vdJspBxQlnOcui2AGHG2uLOzcx27qovy6VzxsLncZeQl9SvTc6xM7RMe8O7u7re1tbVLKysrJex9rVa72Wq1PsgnMKR0w+Hwp3w+/9SWxmYilUo9TCaTBnGtJmoxrX6zuroqQS0wJQugSDcvYtLUoOkYyecKhcJ8EEErADWHhoasiMqG2IZyYpiBRU+vRqNxSqILCEa2AZTLcaPiJ3uF+s+jxyyH7UMzdZ/n6CENciR6JJ+W9CLhM+6dK5fLNc2KRP2Jo0yms9hYt1sugXd55unmNbK/gHla4yE/TCvSbWFhoWI1go3Z2NjQe5q6L6CZ1Uma5HK5CADT0kiaCEQ+sWHKnXq97nCvaYG64y9BR8kU86hLB6bZXu7OWW+uuiOQhrFKXzr6rX3B+QrnJM8i+zN05AaAjjcS+D6T9CPbKbQteSA9IAVBtQ3Ve+qS2i9GlPWark4rhvMio3BHUpDkiTrKHXMSkKlWq/b3oVL1nXFeYn9bMfxGSvIrzhsRhvb4b0QsDmfQJ8OsvAXoNIBtpvwHQ6rP6MT/0W8BBgD5g6BWPSPfggAAAABJRU5ErkJggg==) no-repeat center center;
+	width: 32px;
+	height: 32px;
+	border: none;
+	cursor: pointer;
+	opacity: 0.5;
+}
+#options_font_color {
+	background-color: WindowText; 
+	color: Window; 
+}
+#options_background_color {
+	background-color: Window; 
+	color: WindowText; 
+}
+#options_highlight_font_color {
+	background-color: HighlightText; 
+	color: Highlight; 
+}
+#options_highlight_color {
+	background-color: Highlight; 
+	color: HighlightText; 
+}
 </style>
 <script>
+// render a single bookmark node
 function render(node, target, fetch, style) {
 	var li = document.createElement('li');
 	var a = document.createElement('a');
@@ -106,7 +165,7 @@ function render(node, target, fetch, style) {
 	// folder
 	if (node.children) {
 		a.folderId = node.id;
-		if (localStorage['open.' + node.id]) {
+		if (localStorage.getItem('open.' + node.id)) {
 			a.className = (style || 'folder') + ' open';
 			if (fetch)
 				fetch(function(result) { renderAll(result, li); });
@@ -124,6 +183,7 @@ function render(node, target, fetch, style) {
 	return li;
 }
 
+// render an array of bookmark nodes
 function renderAll(nodes, target) {
 	var ul = document.createElement('ul');
 	for (var i = 0; i < nodes.length; i++) {
@@ -135,6 +195,7 @@ function renderAll(nodes, target) {
 	return ul;
 }
 
+// toggle folder open state
 function toggle(node, a, fetch, style) {
 	if (document.onclick)
 		return;// dont toggle while selecting folder
@@ -148,12 +209,125 @@ function toggle(node, a, fetch, style) {
 	} else {
 		// open folder
 		a.className = (style || 'folder') + ' open';
-		localStorage['open.' + node.id] = true;
+		localStorage.setItem('open.' + node.id, true);
 		if (fetch)
 			fetch(function(result) { renderAll(result, target); });
 		else
 			renderAll(node.children, target);
 	}
+}
+
+// options : default values
+var config = {
+		font: 'sans-serif',
+		font_size: 14,
+		font_color: '',
+		background_color: '',
+		highlight_font_color: '',
+		highlight_color: '',
+		num_fav_cols: 1,
+		spacing: 1,
+		margin: 1,
+		splitter_pos: .5,
+		hide_splitter: 0,
+		hide_choose: 0
+	};
+
+// get config value or default
+function getConfig(key) {
+	var value =  localStorage.getItem('options.' + key);
+	if (value != null)
+		return typeof config[key] === 'number' ? Number(value) : value;
+	else
+		return config[key];
+}
+
+// set config value
+function setConfig(key, value) {
+	if (value != null)
+		localStorage.setItem('options.' + key, typeof config[key] === 'number' ? Number(value) : value);
+	else {
+		localStorage.removeItem('options.' + key);
+		value = config[key];
+	}
+	onChange(key, value);
+	return value;
+}
+
+// map config keys to styles
+var styles = {};
+
+function getStyle(key, value) {
+	switch(key) {
+		case 'font':
+			return 'a { font-family: "' + value + '"; }';
+		case 'font_size':
+			return 'a { font-size: ' + (value / 10) + 'em; }';
+		case 'font_color':
+			return 'a { color: ' + value + '; }' + 
+				   '#options_font_color { background-color: ' + value + '; }' +
+				   '#options_background_color { color: ' + value + '; }';
+		case 'background_color':
+			return 'body { background-color: ' + value + '; }' + 
+				   '#options_font_color { color: ' + value + '; }' +
+				   '#options_background_color { background-color: ' + value + '; }';
+		case 'highlight_font_color':
+			return 'a:hover { color: ' + value + '; }' + 
+				   '#options_highlight_font_color { background-color: ' + value + '; }' +
+				   '#options_highlight_color { color: ' + value + '; }';
+		case 'highlight_color':
+			return 'a:hover { background-color: ' + value + '; }' + 
+				   '#options_highlight_font_color { color: ' + value + '; }' +
+				   '#options_highlight_color { background-color: ' + value + '; }';
+		case 'num_fav_cols':
+			return '#favorites > ul { -webkit-column-count: ' + value + '; -webkit-column-gap: 0; }';
+		case 'spacing':
+			return '#favorites, #bookmarks { line-height: ' + (1 + 1 * value * value) + '; } ' +
+				   'a { border-width: ' + (.4 * value * value) + 'em ' + (.4 + .4 * value * value) + 'em; }';
+		case 'margin':
+			return '#favorites, #bookmarks { padding: ' + (85 * value * value) + 'px 0; } ' +
+				   '#favorites > *, #bookmarks > * { margin-left: ' + (85 * value * value) + 'px; } ' +
+				   '#splitter { margin: ' + (5 + 85 * value * value) + 'px 0; }';
+		case 'splitter_pos':
+			return '#favorites { width: ' + (window.innerWidth * value) + 'px; }';
+		case 'hide_splitter':
+			return '#splitter { display: none; }';
+		case 'hide_choose':
+			return '.choose { display: none; }';
+		default:
+			return null;
+	}
+}
+
+// apply config value change
+function onChange(key, value) {
+	if (value == null)
+		value = getConfig(key);
+	
+	var isDefault = value == config[key];
+	
+	if (!isDefault || key === 'splitter_pos') {
+		var style;
+		if (styles.hasOwnProperty(key))
+			style = styles[key];
+		else {
+			style = document.createElement('style');
+			document.head.appendChild(style);
+			styles[key] = style;
+		}
+		
+		// add style rules
+		style.innerText = getStyle(key, value);
+
+	} else if (styles.hasOwnProperty(key)) {
+		// remove rules
+		styles[key].parentNode.removeChild(styles[key]);
+		delete styles[key];
+	}
+
+	// show/hide default button
+	document.getElementById('options_' + key).nextSibling
+		.style.visibility = (isDefault ? 'hidden' : null);
 }
 
 function init() {
@@ -184,7 +358,7 @@ function init() {
 			document.onclick = function(event) {
 				if (event.target.folderId) {
 					favs.innerHTML = '';
-					localStorage['favorites'] = event.target.folderId;
+					localStorage.setItem('favorites', event.target.folderId);
 					chrome.bookmarks.getChildren(event.target.folderId, function(result) {
 						renderAll(result, favs).appendChild(choose);
 					});
@@ -200,58 +374,115 @@ function init() {
 	choose.appendChild(a);
 	
 	// show favorites
-	if (localStorage['favorites']) {
-		chrome.bookmarks.getChildren(localStorage['favorites'], function(result) {
+	if (localStorage.getItem('favorites')) {
+		chrome.bookmarks.getChildren(localStorage.getItem('favorites'), function(result) {
 			renderAll(result, favs).appendChild(choose);
 		});
 	} else
 		renderAll([], favs).appendChild(choose);
 
-	// restore split position
-	if (!localStorage['split']) {
-		favs.style.width = (window.innerWidth * .5) + 'px';
-		localStorage['split'] = .5;
-	} else {
-		favs.style.width = (window.innerWidth * localStorage['split']) + 'px';
-	}
-	
 	// setup splitter
 	var splitter = document.getElementById('splitter');
 	splitter.onmousedown = function(downevent) {
-		var downnwidth = parseInt(favs.style.width);
+		var downnwidth = getConfig('splitter_pos') * window.innerWidth;
+		var pos;
 	
 		document.onmousemove = function(event) {
-			favs.style.width = Math.max(Math.min((downnwidth + event.clientX - downevent.clientX), window.innerWidth - 5), 0) + 'px';
+			pos = Math.max(Math.min((downnwidth + event.pageX - downevent.pageX), window.innerWidth - 5), 0) / window.innerWidth;
+			onChange('splitter_pos', pos);
 		};
 		
 		document.onmouseup = function(event) {
 			document.onmouseup = null;
 			document.onmousemove = null;
-			localStorage['split'] = parseInt(favs.style.width) / window.innerWidth;
+			setConfig('splitter_pos', pos);
 		};
 		
 		return false;
 	};
 	
 	splitter.oncontextmenu = function(event) {
-		favs.style.width = (window.innerWidth * .5) + 'px';
-		localStorage['split'] = .5;
+		setConfig('splitter_pos', null);
 		return false;
 	};
 	
 	window.onresize = function(event) {
-		favs.style.width = (window.innerWidth * localStorage['split']) + 'px';
+		onChange('splitter_pos');
+	};
+	
+	// load settings
+	function showConfig(key) {
+		var input = document.getElementById('options_' + key);
+		input[input.type === 'checkbox' ? 'checked' : 'value'] = getConfig(key);
+	}
+	
+	function initConfig(key) {
+		var input = document.getElementById('options_' + key);
+		input.onchange = function(event) {
+			setConfig(key, input.type === 'checkbox' ? Number(input.checked) : input.value);
+		};
+		
+		var button = document.createElement('button');
+		button.innerText = 'Default';
+		button.onclick = function() {
+			setConfig(key, null);
+			showConfig(key);
+			return false;
+		};
+		
+		input.parentNode.appendChild(button);
+		onChange(key);
+	}
+	
+	for (var key in config)
+		initConfig(key);
+	
+	// options menu
+	var options = document.getElementById('options');
+	document.getElementById('options_button').onclick = function() {
+		for (var key in config)
+			showConfig(key);
+		
+		// show panel	
+		options.className = 'open';
+		
+		setTimeout(function() {
+			document.onclick = function(event) {
+				// hide panel
+				if (event.pageX < options.offsetLeft ||
+					event.pageY > options.offsetHeight) {
+					document.onclick = null;
+					options.className = '';
+					return false;
+				}
+			};
+		}, 0);
+		return false;
 	};
 
 }
 
 document.addEventListener('DOMContentLoaded', init);
-
 </script>
 </head>
 <body>
 <div id="favorites"></div>
 <div id="splitter"></div>
 <div id="bookmarks"></div>
+<div id="options_button"></div>
+<div id="options">
+	<label>Font<input id="options_font" type="text"/></label>
+	<label>Font Size<input id="options_font_size" type="number" min="6" max="100"/></label>
+	<label>Font Color<input id="options_font_color" type="color"/></label>
+	<label>Background Color<input id="options_background_color" type="color"/></label>
+	<label>Highlight Font Color<input id="options_highlight_font_color" type="color"/></label>
+	<label>Highlight Color<input id="options_highlight_color" type="color"/></label>
+	<label>Number of Favorites Columns<input id="options_num_fav_cols" type="number" min="1" max="10"/></label>
+	<label>Item Spacing<input id="options_spacing" type="range" min="0" max="2" step="0.001"/></label>
+	<label>Page Margin<input id="options_margin" type="range" min="0" max="2" step="0.001"/></label>
+	<label>Splitter Position<input id="options_splitter_pos" type="range" min="0" max="1" step="0.0005"/></label>
+	<label>Hide Splitter<input id="options_hide_splitter" type="checkbox"/></label>
+	<label>Hide &quot;Choose Folder&quot; Button<input id="options_hide_choose" type="checkbox"/></label>
+</div>
 </body>
 </html>

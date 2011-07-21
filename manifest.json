@@ -1,7 +1,7 @@
 {
 	"name" : "New Tab + Bookmark Tree",
-	"version" : "1.0",
-	"description" : "Redesigned New Tab page featuring a bookmark tree and favorites folder",
+	"version" : "1.1",
+	"description" : "Redesigned new tab page featuring a bookmark tree and favorites folder",
 	"icons" :
 	{
 		"128" : "icon_128.png",
