@@ -6,8 +6,7 @@
 <link rel="shortcut icon" href="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==" />
 <style>
 body {
-	display: -webkit-box;
-	-webkit-box-orient: horizontal;
+	background-color: #ffffff;
 	margin: 0;
 	overflow-x: hidden;
 	font-family: sans-serif;
@@ -16,29 +15,18 @@ body {
 	white-space: nowrap;
 	-webkit-user-select: none;
 }
-html, body,
-#favorites,
-#bookmarks,
-#splitter {
-	height: 100%;
-}
-#bookmarks {
-	-webkit-box-flex: 1;
-}
 #favorites,
 #bookmarks {
 	box-sizing: border-box;
-	padding: 85px 0;
-	min-width: 1px;
-}
-#favorites > *,
-#bookmarks > * {
-	margin-left: 85px;
 	overflow: hidden;
+	padding: 85px 5px 20px 85px;
+}
+#favorites {
+	position: absolute;
 }
 ul {
-	margin: -1px;
-	padding: 1px;
+	margin: 0;
+	padding: 0;
 	list-style: none;
 }
 a + ul {
@@ -47,7 +35,7 @@ a + ul {
 a {
 	font-size: 1.4em;
 	text-decoration: none;
-	color: inherit;
+	color: #555555;
 	cursor: pointer;
 	background-position: 0 50%;
 	background-repeat: no-repeat;
@@ -55,49 +43,44 @@ a {
 	border: solid transparent;
 	border-width: .4em .8em;
 	border-radius: .3em;
+	-webkit-transition-property: color, background, box-shadow;
+	-webkit-transition-duration: 0.2s;
+	-webkit-transition-timing-function: ease-out;
 }
 a:hover, .select .choose a {
-	color: HighlightText;
-	background-color: Highlight;
+	color: #000000;
+	background-color: #E4F4FF;
+	box-shadow: 0 0 7px #57B0FF;
 }
 .choose a {
 	padding-left: 0;
+	color: #888888;
 }
 li + .choose {
 	position: relative;
 	top: 1.5em;
 	margin-bottom: 1.5em;
-	color: GrayText;
 }
 .select * {
 	cursor: crosshair;
 }
 .select .folder {
-	outline: 1px dotted Highlight;
-}
-#splitter {
-	height: auto;
-	width: 5px;
-	margin: 90px 0;
-	cursor: e-resize;
-	background-color: WindowFrame;
-	opacity: 0.1;
-	border-radius: 3px;
-}
-#splitter:hover {
-	opacity: 0.2;
+	outline: 1px dotted #3AA2FF;
 }
 #options, #options_button {
 	position: absolute;
 	top: 0;
 	right: 0;
+	border: none;
+	padding: 0;
+	box-shadow: none;
 }
 #options {
 	display: none;
 	padding: 1em;
-	color: WindowText;
-	background-color: Window;
-	border: solid WindowFrame;
+	color: #000000;
+	background-color: #ffffff;
+	border: solid #000000;
 	border-width: 0 0 1px 1px;
 	border-bottom-left-radius: .3em;
 }
@@ -117,16 +100,16 @@ input {
 	margin-left: 1em;
 }
 .folder {
-	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjczRUY0NUFGQUI4NjExRTBCMUE5OTM1ODA5RkE3RDZDIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjczRUY0NUIwQUI4NjExRTBCMUE5OTM1ODA5RkE3RDZDIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6NzNFRjQ1QURBQjg2MTFFMEIxQTk5MzU4MDlGQTdENkMiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6NzNFRjQ1QUVBQjg2MTFFMEIxQTk5MzU4MDlGQTdENkMiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz7EsyUCAAAAi0lEQVR42mL8//8/AyWAiYFCQBsDGBkZI4BYFIgZkDEpLrAA4gogNiDXCyDrJgJxOhCbkmMAKGoeAXE7EOcBsSxOE0DRiI6BYAKSElUg3gXEctjUsuDxAggoAHEdECcC8VNSvSAHxOVAPAmXZhDA54JcIJ4JxBfwRgOOMIgAYjFi1DIO07xACgAIMACgvlAfwCgYdAAAAABJRU5ErkJggg==);
+	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjEwQTA2MjcwQTc5QjExRTE5NDdCRDY0NTM4RUYzODA2IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjEwQTA2MjcxQTc5QjExRTE5NDdCRDY0NTM4RUYzODA2Ij4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6MTBBMDYyNkVBNzlCMTFFMTk0N0JENjQ1MzhFRjM4MDYiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6MTBBMDYyNkZBNzlCMTFFMTk0N0JENjQ1MzhFRjM4MDYiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz6ZwGGeAAAAxklEQVR42mL8//8/AyWAccANYAAZgI6BIAKIRbHJYajFJqitrb2Wh4dnCtAQA0IGMGFzlTAQbN269YW4uHgZIyOjKclesLe33w+kxY4cOdIkIiKyEahMliQvQA0AscX27NnTy8HBcQBoiBw2tSw4XMUIjiJGRi5+fn6FkydPXtfT0/tBkhdANgoICCxcunTpNKCYCElesLOzOyAoKDh1xYoVPUC+BsnRWFRUNP/8+fOlQLYKWekAiJ2AWICYhMQ49DMTQIABAJmPd5NwHxQoAAAAAElFTkSuQmCC);
 }
 .folder.open {
-	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjM5N0QwNTJDQUI4NjExRTBCRTU1RDM5Mzc4NjQwRjVCIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjM5N0QwNTJEQUI4NjExRTBCRTU1RDM5Mzc4NjQwRjVCIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6Mzk3RDA1MkFBQjg2MTFFMEJFNTVEMzkzNzg2NDBGNUIiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6Mzk3RDA1MkJBQjg2MTFFMEJFNTVEMzkzNzg2NDBGNUIiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz5MiKKUAAAAX0lEQVR42mL8//8/AyWAiYFCMBwNYGRkRMe5QLwNpwmgWEDGaCAXiL+BMLo6uHo8BuRDNd8jxwBkzXgNwBaIIM3tQPwCFCSEApEFi5gHlJZAEjuIywDG0aRMuQEAAQYANjRtmRna5N4AAAAASUVORK5CYII=);
+	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjZDOTIxQjk2QTc5QjExRTE4MEMyRjYwN0M2RkFFNkMyIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjZDOTIxQjk3QTc5QjExRTE4MEMyRjYwN0M2RkFFNkMyIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6NkM5MjFCOTRBNzlCMTFFMTgwQzJGNjA3QzZGQUU2QzIiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6NkM5MjFCOTVBNzlCMTFFMTgwQzJGNjA3QzZGQUU2QzIiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz7Qhb8lAAAAg0lEQVR42mL8//8/AyWAiYFCMBIMYGRkzAXibTgVgGIBFwaCXCD+xsTE9APIj8amhgmPzflAqpODg+M90ACQOgWivQDV3A7SzAkEJIUBsmYg5vwHBPgMYMEi5gFy8p8/f0S/fPkCFlBUVLxDtAHAgPEEUjFALI8m9RCrd0fzAgNAgAEAr1NHVlPFdEoAAAAASUVORK5CYII=);
 }
 .recent {
-	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAASCAYAAAC5DOVpAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9kJFRQTIaWbePsAAAGiSURBVDjLY2CgB1AImCEAxO+hWIBSwxIiqhb9j6ha/B/EptSw86t3rvoPwiA2KRrZgFgNiM2A2AGIK4H4/8e3y8AYxAZiP6g6FkKGzdIKn/HfLm36f91IsMb/DdOn////bcb//99n/K8HsqEG/oDi+0A8FZdhK0PKp/5/9awLaEAHFHeiYJDcs8fd/1887fpfO3USyOB3QMyIzTA+IJ5tkzr1/9FTTf//f62E4ioU/O9L9f+KSX3/FQNnPAaqt8bpVTmfCYxABUUaYdP+HDtV9v//lywgzobjr29z/3vlTwC56DgQKxGOCP9poAD+tHVv/v//n6OBOAaOz53PhIWbJbGxqqcdMeX/p5cB//9/8oFiX6BhvmDaJasbZFgssYaVxtbUATXa/r9wPvB/XG3D/8jKpv9nzgQDxez+N04rABk2l1jDVi5aF/l/3urY/8pB0/4B8SyloOnTlYOm/+iak/7/9Bl3kGF3sMYiFsNOa0VM+q8WMvW8VXKXJZK4DhDvM0/sARn2E4i5iMrcQFdEAGlOLHIsQJwKyiXUKkkYhiYAAAc2NpqD+j2EAAAAAElFTkSuQmCC);
+	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAABLklEQVQoz2NgIA0Ic+CUEuWTalI4oPRM6bHcVslEDGkJM9XzRs+snm240HTD6pn+M8WtYhJI0pISurftngU883g2L6d1ldcz32eWz7R2iTHDFRhOtX8W8izimfuz5sjSud5AViBQiUoEXIH1vYBnkUDo/qwpsmSuF5AV8czzmcc2qLSisP2zcLiC+qleYHbgM88bUAUzZJ3BQpEgXYt/BrXcDASyQ56F3oEq+M8T9igMrCDomfUzgwn/q0rvhgJNKDoPd8OMYxA3hD/zBzrOZFXQnZBnfs92ToMr+BmTez8IrsTtmQ+QnHj1vw5cwX/mJ/Mr7gQB7Q1/FgoMj8BnM699zUEJyf9C/3sPnO+9kXu/9N6U65dP/E/9z4oR3P9t/pf+n/t/8v+c/+okxC8AEkSjB4OtKa0AAAAASUVORK5CYII=);
 }
 #options_button {
-	background: transparent url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2RpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDpDODZERDRCMTQ0QjBFMDExOTdCMkM5RTYxMkM5NkQ1QiIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDpCOUREMTJCOEIwNDQxMUUwOUQ5Qzk5MzRCRjNFMDY3NCIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDpCOUREMTJCN0IwNDQxMUUwOUQ5Qzk5MzRCRjNFMDY3NCIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IFdpbmRvd3MiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpDODZERDRCMTQ0QjBFMDExOTdCMkM5RTYxMkM5NkQ1QiIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpDODZERDRCMTQ0QjBFMDExOTdCMkM5RTYxMkM5NkQ1QiIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/Pi0txogAAALJSURBVHjafJTNa1NREMVvPvrSlyZNmg9iCLSbSkmDK6ELQYSCIiiKUhCEQnUjFkQQlP4HLtwIggtXwYVQEIRQV64KoiApunJdLKmBNC1tU5LapvF3rnmhttULw3v3ztwzZ87Me76RkRHzrxUMBocdx3nJ6y/W7P7+fvVozPLy8p/Y/4CYWCw2l0gkrnQ6HbO+vl7Z3Nx80G63T473Xnw+n/H7/ePYJMHzfX19tXg8HslkMkZABwcHkWazGYOZQ8wU+0Xs+zEgShgeHBz8ytPZ29t7DKMA+1x/f7/1w24GkFv4GvjSqnVra0u6VHtAZDADAwPpbDbrRCIRgxbDYui6rgkEAhYIdgZQF3auzra3tx2YJ/4C0sK5FAqFitFodMY7UwJviZlMZcog9I47vdJspBxQlnOcui2AGHG2uLOzcx27qovy6VzxsLncZeQl9SvTc6xM7RMe8O7u7re1tbVLKysrJex9rVa72Wq1PsgnMKR0w+Hwp3w+/9SWxmYilUo9TCaTBnGtJmoxrX6zuroqQS0wJQugSDcvYtLUoOkYyecKhcJ8EEErADWHhoasiMqG2IZyYpiBRU+vRqNxSqILCEa2AZTLcaPiJ3uF+s+jxyyH7UMzdZ/n6CENciR6JJ+W9CLhM+6dK5fLNc2KRP2Jo0yms9hYt1sugXd55unmNbK/gHla4yE/TCvSbWFhoWI1go3Z2NjQe5q6L6CZ1Uma5HK5CADT0kiaCEQ+sWHKnXq97nCvaYG64y9BR8kU86hLB6bZXu7OWW+uuiOQhrFKXzr6rX3B+QrnJM8i+zN05AaAjjcS+D6T9CPbKbQteSA9IAVBtQ3Ve+qS2i9GlPWark4rhvMio3BHUpDkiTrKHXMSkKlWq/b3oVL1nXFeYn9bMfxGSvIrzhsRhvb4b0QsDmfQJ8OsvAXoNIBtpvwHQ6rP6MT/0W8BBgD5g6BWPSPfggAAAABJRU5ErkJggg==) no-repeat center center;
+	background: transparent url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2RpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDpDODZERDRCMTQ0QjBFMDExOTdCMkM5RTYxMkM5NkQ1QiIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDo4QzEzQTA4NkE3OUExMUUxOUUxM0U3QTlDQjQ0MUQ5RSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDo4QzEzQTA4NUE3OUExMUUxOUUxM0U3QTlDQjQ0MUQ5RSIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IFdpbmRvd3MiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpERjZGRkM1QjlBQTdFMTExOTA1Rjg5MzJCMDE0MkI2MyIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpDODZERDRCMTQ0QjBFMDExOTdCMkM5RTYxMkM5NkQ1QiIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/Pl9yK88AAANASURBVHjafFRdSJNhFH6/uR/ndNP9MLfldJP9uJHYYE1EGnZbEIyuuusisCAmDKkuRLpZsgvrpoLsqjsvGnRhEHRRkCESIosFypxri7npUoebc7WfnvPlFpX1woH3e99znvOc55z343p7e9m/llAoNIrF4kfYfsO6UalUMn/6JBKJn77/AWF6vf6uRCK5UK/XWblc/ppOp69Vq9WT/RsbjuOYQCBwwM7DeV4kEu04HA5noVBgBCSXy0/ncjkFmInhc7lWq72FffoLCCUYFQrFKgBEALoFZy6bzRpUKhV/n8lkPNhvobxiS0uL+jtWPp830lUTCEFsbGzMBuqi9vZ2BudTxFAqlTIE8UCdnZ2stbVVCnZSOjs4OBC5XC5TA4gjsQkoHo9bQ6HQm42NDV2DJZ3/uahMMui3Mz097cbR5yYQZUdZDBmSyNZDQpOzwWDYB9MkAOuLi4v6WCymIXASfG9vr4Kk2pWVld3jpAKi/AD2ATX3NLJ2dXUVJicnn42Ojl4fGRkZx/4xgHfpjhIjoRAyLA0MDNzjNWprazurVqv9JCo6w2tCGU0mUxTgAbvdXqHgjo6OpUAg4EomkxfRDyaTyZhWq7WAyG2n0zkvmJqakup0uppSqWSYGT4bxGbr6+tpOFSOjo5ohlixWGTLy8tf0KxGl/kGILYaDAbFHLKpI5HIC0yoamFhwUptp0DMTBENGMIcxSgQDAxmszkC5krqJmaIDQ8PJ2EJlHdJaLPZcmtra1cHBwftAHyaSqU0JDacZWC5CuAwcKpohg+lyonJMaOyz+cL4fwlPve5vr4+XheIq+nv709BJwl9Uwk01VQSaUSa0IwRELEB63J3d7dxZmZmmxebnOgCtIcgsoQ0okWC0khQMC0Cb8wV+RweHkqgoxWfPFBz4ubm5jKoN43ulLxeb9xisWQRWCNAMgpGl/IejyeJTpcwFqlwOLzdfKuNgdzc3CRQP+wM7BXMPDs7Ow799OSIB7zl9/ufY/sR5oW9R1cfRqPRX4+WyoM+NdR/n4SmUqkzExMTNjheIR+NRvPa7XbfLJVKlPgJjQh19zdGJy0SFRqcwwAGoU8dU33HarW+w2/kxB/bDwEGAE69csuz6uPVAAAAAElFTkSuQmCC) no-repeat center center;
 	width: 32px;
 	height: 32px;
 	border: none;
@@ -134,20 +117,24 @@ input {
 	opacity: 0.5;
 }
 #options_font_color {
-	background-color: WindowText; 
-	color: Window; 
+	background-color: #555555; 
+	color: #ffffff; 
 }
 #options_background_color {
-	background-color: Window; 
-	color: WindowText; 
+	background-color: #ffffff; 
+	color: #555555; 
 }
 #options_highlight_font_color {
-	background-color: HighlightText; 
-	color: Highlight; 
+	background-color: #000000; 
+	color: #E4F4FF; 
 }
 #options_highlight_color {
-	background-color: Highlight; 
-	color: HighlightText; 
+	background-color: #E4F4FF; 
+	color: #000000; 
+}
+#options_shadow_color {
+	background-color: #57B0FF; 
+	color: #ffffff; 
 }
 </style>
 <script>
@@ -159,7 +146,9 @@ function render(node, target, fetch, style) {
 	if (node.url) {
 		a.href = node.url;
 		a.style.backgroundImage = 'url(chrome://favicon/' + node.url + ')';
-	}
+	} else
+		a.href = '#';
+
 	li.appendChild(a);
 	
 	// folder
@@ -221,15 +210,16 @@ function toggle(node, a, fetch, style) {
 var config = {
 		font: 'sans-serif',
 		font_size: 14,
-		font_color: '',
-		background_color: '',
-		highlight_font_color: '',
-		highlight_color: '',
+		font_color: '#555555',
+		background_color: '#ffffff',
+		highlight_font_color: '#000000',
+		highlight_color: '#E4F4FF',
+		shadow_color: '#57B0FF',
+		fade: .4,
 		num_fav_cols: 1,
 		spacing: 1,
 		margin: 1,
 		splitter_pos: .5,
-		hide_splitter: 0,
 		hide_choose: 0
 	};
 
@@ -270,7 +260,8 @@ function getStyle(key, value) {
 		case 'background_color':
 			return 'body { background-color: ' + value + '; }' + 
 				   '#options_font_color { color: ' + value + '; }' +
-				   '#options_background_color { background-color: ' + value + '; }';
+				   '#options_background_color { background-color: ' + value + '; }' +
+				   '#options_shadow_color { color: ' + value + '; }';
 		case 'highlight_font_color':
 			return 'a:hover { color: ' + value + '; }' + 
 				   '#options_highlight_font_color { background-color: ' + value + '; }' +
@@ -279,6 +270,11 @@ function getStyle(key, value) {
 			return 'a:hover { background-color: ' + value + '; }' + 
 				   '#options_highlight_font_color { color: ' + value + '; }' +
 				   '#options_highlight_color { background-color: ' + value + '; }';
+		case 'shadow_color':
+			return 'a:hover { box-shadow: 0 0 7px ' + value + '; }' + 
+				   '#options_shadow_color { background-color: ' + value + '; }';
+		case 'fade':
+			return 'a { -webkit-transition-duration: ' + (value * value) + 's; }';
 		case 'num_fav_cols':
 			return '#favorites > ul { -webkit-column-count: ' + value + '; -webkit-column-gap: 0; }';
 		case 'spacing':
@@ -286,12 +282,10 @@ function getStyle(key, value) {
 				   'a { border-width: ' + (.4 * value * value) + 'em ' + (.4 + .4 * value * value) + 'em; }';
 		case 'margin':
 			return '#favorites, #bookmarks { padding: ' + (85 * value * value) + 'px 0; } ' +
-				   '#favorites > *, #bookmarks > * { margin-left: ' + (85 * value * value) + 'px; } ' +
-				   '#splitter { margin: ' + (5 + 85 * value * value) + 'px 0; }';
+				   '#favorites > *, #bookmarks > * { margin-left: ' + (85 * value * value) + 'px; }';
 		case 'splitter_pos':
-			return '#favorites { width: ' + (window.innerWidth * value) + 'px; }';
-		case 'hide_splitter':
-			return '#splitter { display: none; }';
+			return '#favorites { width: ' + (window.innerWidth * value) + 'px; }' +
+				   '#bookmarks { margin-left: ' + (window.innerWidth * value) + 'px; }';
 		case 'hide_choose':
 			return '.choose { display: none; }';
 		default:
@@ -337,8 +331,8 @@ function init() {
 	chrome.bookmarks.getTree(function(result) {
 		var ul = renderAll(result[0].children, bookmarks);
 		// recent bookmarks
-		render({ title: 'Recent', children: true }, ul, function(callback) {
-			chrome.bookmarks.getRecent(50, function(result) {
+		render({ title: 'Recent bookmarks', children: true }, ul, function(callback) {
+			chrome.bookmarks.getRecent(10, function(result) {
 				callback(result);
 			});
 		}, 'recent');
@@ -350,6 +344,7 @@ function init() {
 	choose.className = 'choose';
 	var a = document.createElement('a');
 	a.innerText = 'Choose Folder';
+	a.href = '#';
 	a.onclick = function() {
 		if (document.onclick)
 			return;
@@ -380,31 +375,6 @@ function init() {
 		});
 	} else
 		renderAll([], favs).appendChild(choose);
-
-	// setup splitter
-	var splitter = document.getElementById('splitter');
-	splitter.onmousedown = function(downevent) {
-		var downnwidth = getConfig('splitter_pos') * window.innerWidth;
-		var pos;
-	
-		document.onmousemove = function(event) {
-			pos = Math.max(Math.min((downnwidth + event.pageX - downevent.pageX), window.innerWidth - 5), 0) / window.innerWidth;
-			onChange('splitter_pos', pos);
-		};
-		
-		document.onmouseup = function(event) {
-			document.onmouseup = null;
-			document.onmousemove = null;
-			setConfig('splitter_pos', pos);
-		};
-		
-		return false;
-	};
-	
-	splitter.oncontextmenu = function(event) {
-		setConfig('splitter_pos', null);
-		return false;
-	};
 	
 	window.onresize = function(event) {
 		onChange('splitter_pos');
@@ -467,9 +437,8 @@ document.addEventListener('DOMContentLoaded', init);
 </head>
 <body>
 <div id="favorites"></div>
-<div id="splitter"></div>
 <div id="bookmarks"></div>
-<div id="options_button"></div>
+<a id="options_button" href="#"></a>
 <div id="options">
 	<label>Font<input id="options_font" type="text"/></label>
 	<label>Font Size<input id="options_font_size" type="number" min="6" max="100"/></label>
@@ -477,11 +446,12 @@ document.addEventListener('DOMContentLoaded', init);
 	<label>Background Color<input id="options_background_color" type="color"/></label>
 	<label>Highlight Font Color<input id="options_highlight_font_color" type="color"/></label>
 	<label>Highlight Color<input id="options_highlight_color" type="color"/></label>
+	<label>Shadow Color<input id="options_shadow_color" type="color"/></label>
+	<label>Highlight Fade Time<input id="options_fade" type="range" min="0" max="0.8" step="0.001"/></label>
 	<label>Number of Favorites Columns<input id="options_num_fav_cols" type="number" min="1" max="10"/></label>
 	<label>Item Spacing<input id="options_spacing" type="range" min="0" max="2" step="0.001"/></label>
 	<label>Page Margin<input id="options_margin" type="range" min="0" max="2" step="0.001"/></label>
 	<label>Splitter Position<input id="options_splitter_pos" type="range" min="0" max="1" step="0.0005"/></label>
-	<label>Hide Splitter<input id="options_hide_splitter" type="checkbox"/></label>
 	<label>Hide &quot;Choose Folder&quot; Button<input id="options_hide_choose" type="checkbox"/></label>
 </div>
 </body>
