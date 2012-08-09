@@ -1,0 +1,21 @@
+This extension replaces the default new tab page with a nicer one.
+
+Your bookmarks, apps, most visited sites, recently closed tabs, and weather forecast are shown in a column. Drag and drop folders to create new columns or reorder them. The font, colors, spacing, and more can be customized from the options menu.
+
+
+Version 1.2 - August 8, 2012
+• added apps, most visited, recently closed, and weather
+• more flexible layout with unlimited columns
+• open all links in folder from context menu
+• color themes and new default style
+• added smooth animation and highlight shadow
+• drag and drop to reorder folders and columns
+• background image support
+• bug fixes
+• new name (formerly New Tab + Bookmark Tree)
+
+Version 1.1 - July 20, 2011
+• added options menu
+
+Version 1.0 - July 17, 2011
+• initial release

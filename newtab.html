@@ -3,117 +3,204 @@
 <head>
 <meta charset="utf-8" />
 <title>New Tab</title>
-<link rel="shortcut icon" href="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==" />
+<link rel="shortcut icon" href="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" />
 <style>
 body {
 	background-color: #ffffff;
+	background-attachment: fixed;
+	background-position: top;
 	margin: 0;
 	overflow-x: hidden;
 	font-family: sans-serif;
 	font-size: 62.5%;
-	line-height: 2;
-	white-space: nowrap;
+	line-height: 1;
 	-webkit-user-select: none;
 }
-#favorites,
-#bookmarks {
-	box-sizing: border-box;
-	overflow: hidden;
-	padding: 85px 5px 20px 85px;
+#main {
+	padding: 85px 10% 0 10%;
+	white-space: nowrap;
 }
-#favorites {
-	position: absolute;
-}
-ul {
+#main ul, .menu {
 	margin: 0;
 	padding: 0;
 	list-style: none;
 }
-a + ul {
-	padding-left: 2.5em;
+#main a + ul, #main a + div {
+	padding-left: 24px;
 }
-a {
-	font-size: 1.4em;
+#main a {
+	box-sizing: border-box;
+	max-width: 100%;
+	display: inline-block;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-size: 1.6em;
+	line-height: 2;
 	text-decoration: none;
 	color: #555555;
-	cursor: pointer;
 	background-position: 0 50%;
 	background-repeat: no-repeat;
-	padding-left: 24px;
+	background-size: 16px 16px;
+	padding: 0 .8em 0 24px;
 	border: solid transparent;
-	border-width: .4em .8em;
-	border-radius: .3em;
-	-webkit-transition-property: color, background, box-shadow;
+	border-width: 0 0 0 .8em;
+	border-radius: .2em;
+	-webkit-transition-property: color, background-color, box-shadow, opacity;
 	-webkit-transition-duration: 0.2s;
 	-webkit-transition-timing-function: ease-out;
 }
-a:hover, .select .choose a {
+#main a:hover {
 	color: #000000;
 	background-color: #E4F4FF;
 	box-shadow: 0 0 7px #57B0FF;
 }
-.choose a {
+.wrap {
+/*	overflow: hidden;
+	padding: 7px;
+	margin: -7px -7px -7px 0;*/
+	-webkit-transition-property: height, opacity;
+	-webkit-transition-duration: 0.2s;
+	-webkit-transition-timing-function: ease-out;
+}
+.column {
+	display: inline-block;
+	vertical-align: top;
+	box-sizing: border-box;
+	padding: 10px 0 20px 0;
+	min-height: 300px;
+}
+#main .empty {
+	opacity: 0.5;
 	padding-left: 0;
-	color: #888888;
 }
-li + .choose {
-	position: relative;
-	top: 1.5em;
-	margin-bottom: 1.5em;
+.menu {
+	position: absolute;
+	overflow: hidden;
+	white-space: nowrap;
+	font-size: 1.2em;
+	line-height: 1.8;
+	background-color: #fafafa;
+	border: solid 1px #999999;
+	border-radius: 3px;
+	box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5);
 }
-.select * {
-	cursor: crosshair;
+.menu a {
+	display: block;
+	text-decoration: none;
+	color: #000000;
+	padding: 0 2em;
+	border: solid 1px transparent;
 }
-.select .folder {
-	outline: 1px dotted #3AA2FF;
+.menu a:hover {
+	background-color: #E4F4FF;
+	border-color: #57B0FF;
+}
+.menu hr {
+	margin: 0;
+	border: solid 1px #cccccc;
+	border-width: 1px 0 0 0;
+}
+.dragstart {
+	opacity: 0.5;
 }
 #options, #options_button {
 	position: absolute;
 	top: 0;
 	right: 0;
-	border: none;
-	padding: 0;
-	box-shadow: none;
 }
 #options {
 	display: none;
-	padding: 1em;
 	color: #000000;
-	background-color: #ffffff;
-	border: solid #000000;
+	background-color: #fafafa;
+	border: solid #999999;
 	border-width: 0 0 1px 1px;
-	border-bottom-left-radius: .3em;
+	border-bottom-left-radius: 3px;
+	box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5);
 }
-#options.open {
+#options:target {
 	display: block;
+}
+#options div {
+	display: inline-block;
+	vertical-align: top;
+}
+#options div + div {
+	border-left: solid 1px #dddddd;
+}
+#options button {
+	margin: 0 3px;
 }
 #options_button:hover {
 	opacity: 1;
 }
+#options_close_button {
+	color: #000000;
+	text-align: center;
+	text-decoration: none;
+	font-size: 2.0em;
+	position: absolute;
+	top: 0;
+	right: 0;
+	display: block;
+	width: 32px;
+	height: 32px;
+	line-height: 32px;
+}
+h2 {
+	font-size: 1.4em;
+	margin: 8px 14px;
+}
+legend {
+	font-size: 1.4em;
+	color: #888888;
+}
+fieldset {
+	border: solid #dddddd;
+	border-width: 1px 0 0 0;
+	margin: 0;
+	padding: 6px 0 6px 12px;
+}
 label {
 	display: block;
-	font-size: 1.4em;
+	font-size: 1.2em;
 	text-align: right;
+	padding-bottom: 3px;
 }
-input {
-	width: 150px;
-	margin-left: 1em;
+input, select {
+	width: 8em;
+	margin: 0 0 0 .5em;
+	box-sizing: border-box;
+	height: 1.6em;
+	vertical-align: bottom;
 }
 .folder {
-	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjEwQTA2MjcwQTc5QjExRTE5NDdCRDY0NTM4RUYzODA2IiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjEwQTA2MjcxQTc5QjExRTE5NDdCRDY0NTM4RUYzODA2Ij4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6MTBBMDYyNkVBNzlCMTFFMTk0N0JENjQ1MzhFRjM4MDYiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6MTBBMDYyNkZBNzlCMTFFMTk0N0JENjQ1MzhFRjM4MDYiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz6ZwGGeAAAAxklEQVR42mL8//8/AyWAccANYAAZgI6BIAKIRbHJYajFJqitrb2Wh4dnCtAQA0IGMGFzlTAQbN269YW4uHgZIyOjKclesLe33w+kxY4cOdIkIiKyEahMliQvQA0AscX27NnTy8HBcQBoiBw2tSw4XMUIjiJGRi5+fn6FkydPXtfT0/tBkhdANgoICCxcunTpNKCYCElesLOzOyAoKDh1xYoVPUC+BsnRWFRUNP/8+fOlQLYKWekAiJ2AWICYhMQ49DMTQIABAJmPd5NwHxQoAAAAAElFTkSuQmCC);
+	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAYFBMVEXR0dG8vLwHBwcMDAwAAAAPDw8AAADExMQAAAClpaUODg4TExOoqKgREREWFhbBwcEAAAAqKioAAAD////////Pz8////8AAABycnL///////8AAAA8PDw7Ozv///8AAABFcLj8AAAAIHRSTlOXjciUMKIggjWWsbaMlah8HbEVFCh1JFigEEIex8gWAFh1g4cAAABOSURBVHjalc9LEoAgDANQFAX8gn8Fbe9/S7aEFWb5pslMBWcphWvNYJENwmdnA/CSHhwAU1WHtMKqF5RehLbbYHQadxi9j5MB/PPvF0wEW/AdAYoPCN0AAAAASUVORK5CYII=);
 }
 .folder.open {
-	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyBpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNSBXaW5kb3dzIiB4bXBNTTpJbnN0YW5jZUlEPSJ4bXAuaWlkOjZDOTIxQjk2QTc5QjExRTE4MEMyRjYwN0M2RkFFNkMyIiB4bXBNTTpEb2N1bWVudElEPSJ4bXAuZGlkOjZDOTIxQjk3QTc5QjExRTE4MEMyRjYwN0M2RkFFNkMyIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6NkM5MjFCOTRBNzlCMTFFMTgwQzJGNjA3QzZGQUU2QzIiIHN0UmVmOmRvY3VtZW50SUQ9InhtcC5kaWQ6NkM5MjFCOTVBNzlCMTFFMTgwQzJGNjA3QzZGQUU2QzIiLz4gPC9yZGY6RGVzY3JpcHRpb24+IDwvcmRmOlJERj4gPC94OnhtcG1ldGE+IDw/eHBhY2tldCBlbmQ9InIiPz7Qhb8lAAAAg0lEQVR42mL8//8/AyWAiYFCMBIMYGRkzAXibTgVgGIBFwaCXCD+xsTE9APIj8amhgmPzflAqpODg+M90ACQOgWivQDV3A7SzAkEJIUBsmYg5vwHBPgMYMEi5gFy8p8/f0S/fPkCFlBUVLxDtAHAgPEEUjFALI8m9RCrd0fzAgNAgAEAr1NHVlPFdEoAAAAASUVORK5CYII=);
+	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAMFBMVEUODg4jIyP///8AAAAAAAAAAAD///8HBwcAAAD///8AAAAODg4BAQEPDw8AAAADAwMNPiCWAAAAC3RSTlP+41u8vW1c9m97AMNANdEAAAA8SURBVHjarc5JCgAgDANAd61b/v9bBS1Uz80tA4GY+kUVon8hzu4klJlBB7gPhtubkRA6ACsniXaS2vUFQ4YJ5oaTNEEAAAAASUVORK5CYII=);
 }
 .recent {
 	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAABLklEQVQoz2NgIA0Ic+CUEuWTalI4oPRM6bHcVslEDGkJM9XzRs+snm240HTD6pn+M8WtYhJI0pISurftngU883g2L6d1ldcz32eWz7R2iTHDFRhOtX8W8izimfuz5sjSud5AViBQiUoEXIH1vYBnkUDo/qwpsmSuF5AV8czzmcc2qLSisP2zcLiC+qleYHbgM88bUAUzZJ3BQpEgXYt/BrXcDASyQ56F3oEq+M8T9igMrCDomfUzgwn/q0rvhgJNKDoPd8OMYxA3hD/zBzrOZFXQnZBnfs92ToMr+BmTez8IrsTtmQ+QnHj1vw5cwX/mJ/Mr7gQB7Q1/FgoMj8BnM699zUEJyf9C/3sPnO+9kXu/9N6U65dP/E/9z4oR3P9t/pf+n/t/8v+c/+okxC8AEkSjB4OtKa0AAAAASUVORK5CYII=);
 }
+.top {
+	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAABAElEQVQoU2NgIA2IF4vK4pGW5tO+Z9SDR4F5vMUz8/t4FNid8Hxm/0w5HE1YRFbMSsxK3Eq52PZZyDOfZ1aXZMPFgSKiViJ8YAVq+zWfaT/TfWbxzO9ZxLPQZ67PjJ/pAEXUnpkGghW8Wdxw0xWoM/BZ+LNIsJKAZx7P/J6sufDfFqzgP+//qjlXA4GSMBj8LPLJ1QP/vZDc8T9p4nWEEv9nj/b+V0VzasQJkIJwsALPZxGRDOjAGuiDoGepD4OAtMezwDlo0spWTkCnzb36Yf31U6V3vZ95nEdT4N+Tfffaqf9JQAer/p+88YLTQwXUOAFKTUY467/X/+3/JRiIAwCtIIEBY/fpswAAAABJRU5ErkJggg==);
+}
+.apps {
+	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAABKElEQVQoU2NgIB6IyUrPk1kjro1TgXm90TPjZw6tOBVsrXZ55vfkURYWKblniieV15jd8nrm/sxkg9IaxRtyz5CkFbTNnjk9c3jm9Sz0WdAz52f2z1yemSEryAtzBUqFPgt/Fvks4lkYEIYDNSApWOnu+izvQfSTMKACGHR9plUse1IyHKzgv8Txs//n7zkWgKTA/5ndM8tn+nfACmT4fHo0+YprvOHSEc8in9Td9nqWfwOswMZZ65neafNnPs+CwTAS6IaQx//brp363wZW0Bds+8wDaKjvsxunnpxIfBgGNMEF6Mj/qlBH/ld1Bbs+5uEhw3Wq4fdDwb5Q5kPyR/jDIHAIWMc7BDo9C3yW8jD7rq8pkoL/q/8fAUOv/7ZgevX/yXALCAEArcqmRBcRrkIAAAAASUVORK5CYII=);
+}
+.closed {
+	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsSAAALEgHS3X78AAAAsUlEQVQ4jd1TMQ7DIAw8V5lYnBf1KV37HNbODH0IP2JhdYfaqeOCGmXsSQhkON8BNokIPIjoCuAGILlwB1BEpCKARGRGmmGXbNHgF9k7IyK/lZj5rut6saCRbMRkPt5aIxXdHHQAKShNsa7rJmoOyiGmIudsou9HBAAieprdGcyhnnnAvcHwYJwDKvC5wmn8awL7iTiPsLj1oWLSIho6KMw8l1KyL6KdA9eqv7qyw1XuC0yMUOYRi2L1AAAAAElFTkSuQmCC);
+}
+.weather {
+	background-image: none;
+}
+.error {
+	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAxlBMVEUfHx8dHR0fHx8bGxscHByampolJSXj4+P///8lJSX///////////+ioqIiIiLMzMz///8pKSkfHx/////09PT///8mJiYcHBwaGhqenp7Z2dlNTU3////////s7Oz///8mJiapqakjIyP////29vbR0dH////u7u4gICAAAAAxMTFPT09WVlZDQ0NRUVEpKSlUVFRtbW0/Pz9QUFA5OTmDg4NNTU0yMjJJSUliYmJEREQ0NDR3d3dOTk5GRkY2NjYhISFYWFjaCwy2AAAAKnRSTlNmZicbJHTA0R1+KgeV8Ujca/4SR7YzRWkD82+eCxTOQKqcGxiy2IHIZgCHgK8mAAAAf0lEQVR42l3I5w6CMBRAYRy4QCVuFBmi0uuqeyCl7fu/lIkm3BvPr5PPgL++UCkZjLEyQlVtpJRmowDge7E91FsItXynT4mF0Dwf9c0GhM71otsOgd7jrrsBAeDPlx9TCNNsCRQW0WqNgCGM1WxOYaLe+ZQCjISbeBRgOOj/5gPn/ye19z/fnAAAAABJRU5ErkJggg==);
+}
 #options_button {
-	background: transparent url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2RpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDpDODZERDRCMTQ0QjBFMDExOTdCMkM5RTYxMkM5NkQ1QiIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDo4QzEzQTA4NkE3OUExMUUxOUUxM0U3QTlDQjQ0MUQ5RSIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDo4QzEzQTA4NUE3OUExMUUxOUUxM0U3QTlDQjQ0MUQ5RSIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IFdpbmRvd3MiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpERjZGRkM1QjlBQTdFMTExOTA1Rjg5MzJCMDE0MkI2MyIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpDODZERDRCMTQ0QjBFMDExOTdCMkM5RTYxMkM5NkQ1QiIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/Pl9yK88AAANASURBVHjafFRdSJNhFH6/uR/ndNP9MLfldJP9uJHYYE1EGnZbEIyuuusisCAmDKkuRLpZsgvrpoLsqjsvGnRhEHRRkCESIosFypxri7npUoebc7WfnvPlFpX1woH3e99znvOc55z343p7e9m/llAoNIrF4kfYfsO6UalUMn/6JBKJn77/AWF6vf6uRCK5UK/XWblc/ppOp69Vq9WT/RsbjuOYQCBwwM7DeV4kEu04HA5noVBgBCSXy0/ncjkFmInhc7lWq72FffoLCCUYFQrFKgBEALoFZy6bzRpUKhV/n8lkPNhvobxiS0uL+jtWPp830lUTCEFsbGzMBuqi9vZ2BudTxFAqlTIE8UCdnZ2stbVVCnZSOjs4OBC5XC5TA4gjsQkoHo9bQ6HQm42NDV2DJZ3/uahMMui3Mz097cbR5yYQZUdZDBmSyNZDQpOzwWDYB9MkAOuLi4v6WCymIXASfG9vr4Kk2pWVld3jpAKi/AD2ATX3NLJ2dXUVJicnn42Ojl4fGRkZx/4xgHfpjhIjoRAyLA0MDNzjNWprazurVqv9JCo6w2tCGU0mUxTgAbvdXqHgjo6OpUAg4EomkxfRDyaTyZhWq7WAyG2n0zkvmJqakup0uppSqWSYGT4bxGbr6+tpOFSOjo5ohlixWGTLy8tf0KxGl/kGILYaDAbFHLKpI5HIC0yoamFhwUptp0DMTBENGMIcxSgQDAxmszkC5krqJmaIDQ8PJ2EJlHdJaLPZcmtra1cHBwftAHyaSqU0JDacZWC5CuAwcKpohg+lyonJMaOyz+cL4fwlPve5vr4+XheIq+nv709BJwl9Uwk01VQSaUSa0IwRELEB63J3d7dxZmZmmxebnOgCtIcgsoQ0okWC0khQMC0Cb8wV+RweHkqgoxWfPFBz4ubm5jKoN43ulLxeb9xisWQRWCNAMgpGl/IejyeJTpcwFqlwOLzdfKuNgdzc3CRQP+wM7BXMPDs7Ow799OSIB7zl9/ufY/sR5oW9R1cfRqPRX4+WyoM+NdR/n4SmUqkzExMTNjheIR+NRvPa7XbfLJVKlPgJjQh19zdGJy0SFRqcwwAGoU8dU33HarW+w2/kxB/bDwEGAE69csuz6uPVAAAAAElFTkSuQmCC) no-repeat center center;
+	background: transparent url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAMAAABhEH5lAAABiVBMVEViYmIoKCgnJycjIyM9PT08PDwjIyNjY2OhoaH////b29uEhIT///+kpKTY2Ng1NTUhISH///+GhoYoKCj///+Dg4P///8sLCydnZ0kJCQzMzP///9wcHBbW1s0NDTIyMioqKinp6d6enr///80NDQoKCgrKysiIiJWVlaDg4P+/v6SkpKAgIAzMzMkJCT///9nZ2e5ubkrKystLS2BgYGVlZX///93d3cmJia7u7v///+ioqL///85OTkxMTEoKCj////39/dnZ2fx8fGUlJQqKipwcHDOzs7w8PCwsLD////////9/f0qKir///////93d3dRUVEmJiaIiIj///////8iIiL///8AAAA0NDQzMzNERERDQ0NbW1tMTExLS0t3d3dvb29JSUlYWFhZWVlycnJ4eHhTU1N6enpeXl5tbW1paWlGRkZcXFxQUFBSUlJaWlo/Pz9NTU1fX18zMzNVVVViYmJhYWFgYGBWVlZUVFRkZGRlZWU5OTlXV1djY2NnZ2dmZmZoaGiPuPURAAAAWXRSTlPUsrkYoJse0qY+zPY8o830FX33D5P5W6PsbPNOsvLXzj/m/BQVkDYVRfaj0vf9aWZF3SSg/PEf/B7cgbhx6BKHBJE5LfEwl8lrNjo4pxsQIRY8GPICayomABxyED4AAAEGSURBVHjaXZDlb8NADMVvzOuYodMYNN40ho6Zm4vGlHFRbTh39l++5NJJ1fzBev7Jsp8eoX4V5ubkZeQfyr++KchC4eYqSm5jRbX9o2Efzcl2SyDCWMSWbflcoPHES0pPAmjPTiwREkgaAQD0ioMy699qN5G/T8xPA1pvKx7q7Yia/HV9/2BB4eAsr1LSF49q3Bxec7cXGaaN+BYJOiZHrc0ztP2BaDp7pLuzy0L1aZLSo+8kwubOMaFSqwKWbjdO2YaFX7sn3sceVzLn7l5PI/ycChMDBiACY27nqTOBNgYfm+q5Oz/MfF5IAl0uDTVUlwHU1I0dXmWFU6yqFf/yKqksLc/IX5ENcDIUyKR/AAAAAElFTkSuQmCC) no-repeat center center;
 	width: 32px;
 	height: 32px;
-	border: none;
-	cursor: pointer;
 	opacity: 0.5;
 }
 #options_font_color {
@@ -121,7 +208,7 @@ input {
 	color: #ffffff; 
 }
 #options_background_color {
-	background-color: #ffffff; 
+	background-color: #ffffff;
 	color: #555555; 
 }
 #options_highlight_font_color {
@@ -137,322 +224,73 @@ input {
 	color: #ffffff; 
 }
 </style>
-<script>
-// render a single bookmark node
-function render(node, target, fetch, style) {
-	var li = document.createElement('li');
-	var a = document.createElement('a');
-	a.innerText = node.title;
-	if (node.url) {
-		a.href = node.url;
-		a.style.backgroundImage = 'url(chrome://favicon/' + node.url + ')';
-	} else
-		a.href = '#';
-
-	li.appendChild(a);
-	
-	// folder
-	if (node.children) {
-		a.folderId = node.id;
-		if (localStorage.getItem('open.' + node.id)) {
-			a.className = (style || 'folder') + ' open';
-			if (fetch)
-				fetch(function(result) { renderAll(result, li); });
-			else
-				renderAll(node.children, li);
-		} else
-			a.className = style || 'folder';
-		
-		a.onclick = function() {
-			toggle(node, a, fetch, style);
-			return false;
-		};
-	}
-	target.appendChild(li);
-	return li;
-}
-
-// render an array of bookmark nodes
-function renderAll(nodes, target) {
-	var ul = document.createElement('ul');
-	for (var i = 0; i < nodes.length; i++) {
-		var node = nodes[i];
-		if (node.children || node.url)
-			render(node, ul);
-	}
-	target.appendChild(ul);
-	return ul;
-}
-
-// toggle folder open state
-function toggle(node, a, fetch, style) {
-	if (document.onclick)
-		return;// dont toggle while selecting folder
-	
-	var target = a.parentNode;
-	if (a.nextSibling) {
-		// close folder
-		target.removeChild(a.nextSibling);
-		a.className = style || 'folder';
-		localStorage.removeItem('open.' + node.id);
-	} else {
-		// open folder
-		a.className = (style || 'folder') + ' open';
-		localStorage.setItem('open.' + node.id, true);
-		if (fetch)
-			fetch(function(result) { renderAll(result, target); });
-		else
-			renderAll(node.children, target);
-	}
-}
-
-// options : default values
-var config = {
-		font: 'sans-serif',
-		font_size: 14,
-		font_color: '#555555',
-		background_color: '#ffffff',
-		highlight_font_color: '#000000',
-		highlight_color: '#E4F4FF',
-		shadow_color: '#57B0FF',
-		fade: .4,
-		num_fav_cols: 1,
-		spacing: 1,
-		margin: 1,
-		splitter_pos: .5,
-		hide_choose: 0
-	};
-
-// get config value or default
-function getConfig(key) {
-	var value =  localStorage.getItem('options.' + key);
-	if (value != null)
-		return typeof config[key] === 'number' ? Number(value) : value;
-	else
-		return config[key];
-}
-
-// set config value
-function setConfig(key, value) {
-	if (value != null)
-		localStorage.setItem('options.' + key, typeof config[key] === 'number' ? Number(value) : value);
-	else {
-		localStorage.removeItem('options.' + key);
-		value = config[key];
-	}
-	onChange(key, value);
-	return value;
-}
-
-// map config keys to styles
-var styles = {};
-
-function getStyle(key, value) {
-	switch(key) {
-		case 'font':
-			return 'a { font-family: "' + value + '"; }';
-		case 'font_size':
-			return 'a { font-size: ' + (value / 10) + 'em; }';
-		case 'font_color':
-			return 'a { color: ' + value + '; }' + 
-				   '#options_font_color { background-color: ' + value + '; }' +
-				   '#options_background_color { color: ' + value + '; }';
-		case 'background_color':
-			return 'body { background-color: ' + value + '; }' + 
-				   '#options_font_color { color: ' + value + '; }' +
-				   '#options_background_color { background-color: ' + value + '; }' +
-				   '#options_shadow_color { color: ' + value + '; }';
-		case 'highlight_font_color':
-			return 'a:hover { color: ' + value + '; }' + 
-				   '#options_highlight_font_color { background-color: ' + value + '; }' +
-				   '#options_highlight_color { color: ' + value + '; }';
-		case 'highlight_color':
-			return 'a:hover { background-color: ' + value + '; }' + 
-				   '#options_highlight_font_color { color: ' + value + '; }' +
-				   '#options_highlight_color { background-color: ' + value + '; }';
-		case 'shadow_color':
-			return 'a:hover { box-shadow: 0 0 7px ' + value + '; }' + 
-				   '#options_shadow_color { background-color: ' + value + '; }';
-		case 'fade':
-			return 'a { -webkit-transition-duration: ' + (value * value) + 's; }';
-		case 'num_fav_cols':
-			return '#favorites > ul { -webkit-column-count: ' + value + '; -webkit-column-gap: 0; }';
-		case 'spacing':
-			return '#favorites, #bookmarks { line-height: ' + (1 + 1 * value * value) + '; } ' +
-				   'a { border-width: ' + (.4 * value * value) + 'em ' + (.4 + .4 * value * value) + 'em; }';
-		case 'margin':
-			return '#favorites, #bookmarks { padding: ' + (85 * value * value) + 'px 0; } ' +
-				   '#favorites > *, #bookmarks > * { margin-left: ' + (85 * value * value) + 'px; }';
-		case 'splitter_pos':
-			return '#favorites { width: ' + (window.innerWidth * value) + 'px; }' +
-				   '#bookmarks { margin-left: ' + (window.innerWidth * value) + 'px; }';
-		case 'hide_choose':
-			return '.choose { display: none; }';
-		default:
-			return null;
-	}
-}
-
-// apply config value change
-function onChange(key, value) {
-	if (value == null)
-		value = getConfig(key);
-	
-	var isDefault = value == config[key];
-	
-	if (!isDefault || key === 'splitter_pos') {
-		var style;
-		if (styles.hasOwnProperty(key))
-			style = styles[key];
-		else {
-			style = document.createElement('style');
-			document.head.appendChild(style);
-			styles[key] = style;
-		}
-		
-		// add style rules
-		style.innerText = getStyle(key, value);
-
-	} else if (styles.hasOwnProperty(key)) {
-		// remove rules
-		styles[key].parentNode.removeChild(styles[key]);
-		delete styles[key];
-	}
-
-	// show/hide default button
-	document.getElementById('options_' + key).nextSibling
-		.style.visibility = (isDefault ? 'hidden' : null);
-}
-
-function init() {
-
-	// show bookmarks
-	var bookmarks = document.getElementById('bookmarks');
-	chrome.bookmarks.getTree(function(result) {
-		var ul = renderAll(result[0].children, bookmarks);
-		// recent bookmarks
-		render({ title: 'Recent bookmarks', children: true }, ul, function(callback) {
-			chrome.bookmarks.getRecent(10, function(result) {
-				callback(result);
-			});
-		}, 'recent');
-	});
-	
-	// choose folder link
-	var favs = document.getElementById('favorites');
-	var choose = document.createElement('li');
-	choose.className = 'choose';
-	var a = document.createElement('a');
-	a.innerText = 'Choose Folder';
-	a.href = '#';
-	a.onclick = function() {
-		if (document.onclick)
-			return;
-		
-		setTimeout(function() {
-			document.onclick = function(event) {
-				if (event.target.folderId) {
-					favs.innerHTML = '';
-					localStorage.setItem('favorites', event.target.folderId);
-					chrome.bookmarks.getChildren(event.target.folderId, function(result) {
-						renderAll(result, favs).appendChild(choose);
-					});
-				}
-				document.onclick = null;
-				document.body.className = '';
-				return false;
-			};
-		}, 0);
-		document.body.className = 'select';
-		return false;
-	};
-	choose.appendChild(a);
-	
-	// show favorites
-	if (localStorage.getItem('favorites')) {
-		chrome.bookmarks.getChildren(localStorage.getItem('favorites'), function(result) {
-			renderAll(result, favs).appendChild(choose);
-		});
-	} else
-		renderAll([], favs).appendChild(choose);
-	
-	window.onresize = function(event) {
-		onChange('splitter_pos');
-	};
-	
-	// load settings
-	function showConfig(key) {
-		var input = document.getElementById('options_' + key);
-		input[input.type === 'checkbox' ? 'checked' : 'value'] = getConfig(key);
-	}
-	
-	function initConfig(key) {
-		var input = document.getElementById('options_' + key);
-		input.onchange = function(event) {
-			setConfig(key, input.type === 'checkbox' ? Number(input.checked) : input.value);
-		};
-		
-		var button = document.createElement('button');
-		button.innerText = 'Default';
-		button.onclick = function() {
-			setConfig(key, null);
-			showConfig(key);
-			return false;
-		};
-		
-		input.parentNode.appendChild(button);
-		onChange(key);
-	}
-	
-	for (var key in config)
-		initConfig(key);
-	
-	// options menu
-	var options = document.getElementById('options');
-	document.getElementById('options_button').onclick = function() {
-		for (var key in config)
-			showConfig(key);
-		
-		// show panel	
-		options.className = 'open';
-		
-		setTimeout(function() {
-			document.onclick = function(event) {
-				// hide panel
-				if (event.pageX < options.offsetLeft ||
-					event.pageY > options.offsetHeight) {
-					document.onclick = null;
-					options.className = '';
-					return false;
-				}
-			};
-		}, 0);
-		return false;
-	};
-
-}
-
-document.addEventListener('DOMContentLoaded', init);
-</script>
+<script src="newtab.js"></script>
 </head>
 <body>
-<div id="favorites"></div>
-<div id="bookmarks"></div>
-<a id="options_button" href="#"></a>
+<div id="main">
+</div>
+<a id="options_button" href="#options"></a>
 <div id="options">
-	<label>Font<input id="options_font" type="text"/></label>
-	<label>Font Size<input id="options_font_size" type="number" min="6" max="100"/></label>
-	<label>Font Color<input id="options_font_color" type="color"/></label>
-	<label>Background Color<input id="options_background_color" type="color"/></label>
-	<label>Highlight Font Color<input id="options_highlight_font_color" type="color"/></label>
-	<label>Highlight Color<input id="options_highlight_color" type="color"/></label>
-	<label>Shadow Color<input id="options_shadow_color" type="color"/></label>
-	<label>Highlight Fade Time<input id="options_fade" type="range" min="0" max="0.8" step="0.001"/></label>
-	<label>Number of Favorites Columns<input id="options_num_fav_cols" type="number" min="1" max="10"/></label>
-	<label>Item Spacing<input id="options_spacing" type="range" min="0" max="2" step="0.001"/></label>
-	<label>Page Margin<input id="options_margin" type="range" min="0" max="2" step="0.001"/></label>
-	<label>Splitter Position<input id="options_splitter_pos" type="range" min="0" max="1" step="0.0005"/></label>
-	<label>Hide &quot;Choose Folder&quot; Button<input id="options_hide_choose" type="checkbox"/></label>
+	<h2>Options</h2>
+	<a id="options_close_button" href="#">&times;</a>
+	<div>
+	<fieldset>
+		<legend>Font</legend>
+		<label>Font<input id="options_font" type="text"/></label>
+		<label>Size<input id="options_font_size" type="number" min="6" max="100"/></label>
+	</fieldset>
+	<fieldset>
+		<legend>Colors</legend>
+		<label>Theme<select id="options_theme"></select></label>
+		<label>Font color<input id="options_font_color" type="color"/></label>
+		<label>Background color<input id="options_background_color" type="color"/></label>
+		<label>Highlight color<input id="options_highlight_color" type="color"/></label>
+		<label>Highlight font color<input id="options_highlight_font_color" type="color"/></label>
+		<label>Shadow color<input id="options_shadow_color" type="color"/></label>
+	</fieldset>
+	<fieldset>
+		<legend>Background</legend>
+		<label>Image URL<input id="options_background_image" type="text"/></label>
+		<label>Image align<select id="options_background_align">
+			<option value="top">Top</option>
+			<option value="center">Center</option>
+			<option value="bottom">Bottom</option>
+		</select></label>
+		<label>Image tiling<select id="options_background_repeat">
+			<option value="repeat">Tile</option>
+			<option value="repeat-x">Horizontal</option>
+			<option value="repeat-y">Vertical</option>
+			<option value="no-repeat">None</option>
+		</select></label>
+	</fieldset>
+	</div><div>
+	<fieldset>
+		<legend>Weather</legend>
+		<label>Location<input id="options_weather_location" type="text"/></label>
+		<label>°C or °F<select id="options_weather_units">
+			<option value="en-gb">Celsius</option>
+			<option value="en-us">Fahrenheit</option>
+		</select></label>
+	</fieldset>
+	<fieldset>
+		<legend>Highlight</legend>
+		<label>Shadow size<input id="options_shadow_blur" type="range" min="0" max="2" step="0.001"/></label>
+		<label>Corner roundness<input id="options_highlight_round" type="range" min="0" max="2" step="0.001"/></label>
+	</fieldset>
+	<fieldset>
+		<legend>Animation</legend>
+		<label>Highlight fade time<input id="options_fade" type="range" min="0" max="2" step="0.001"/></label>
+		<label>Folder open time<input id="options_slide" type="range" min="0" max="2" step="0.001"/></label>
+	</fieldset>
+	<fieldset>
+		<legend>Layout</legend>
+		<label>Item spacing<input id="options_spacing" type="range" min="0" max="2" step="0.001"/></label>
+		<label>Horizontal margin<input id="options_h_margin" type="range" min="0" max="2" step="0.001"/></label>
+		<label>Vertical margin<input id="options_v_margin" type="range" min="0" max="2" step="0.001"/></label>
+		<label>Hide options button<input id="options_hide_options" type="checkbox"/></label>
+		<label>Lock columns<input id="options_lock" type="checkbox"/></label>
+	</fieldset>
+	</div>
 </div>
 </body>
 </html>

@@ -1,18 +1,30 @@
 {
-	"name" : "New Tab + Bookmark Tree",
+	"name" : "Humble New Tab Page",
 	"version" : "1.2",
-	"description" : "Redesigned new tab page featuring a bookmark tree and favorites folder",
-	"icons" :
-	{
+	"manifest_version": 2,
+	"description" : "Redesigned new tab page featuring your bookmarks, apps, most visited, recently closed, and weather in a custom layout.",
+	"icons" : {
 		"128" : "icon_128.png",
-		"48" : "icon_48.png"
+		 "48" : "icon_48.png"
 	},
 	"permissions" : [
 		"bookmarks",
-		"chrome://favicon/"
+		"chrome://favicon/",
+		"topSites",
+		"management",
+		"tabs",
+		"http://www.google.com/",
+		"experimental"
 	],
+	"background" : {
+		"scripts" : ["background.js"]
+	},
 	"chrome_url_overrides" :
 	{
 		"newtab" : "newtab.html"
-	}
+	},
+	"options_page": "newtab.html#options",
+	"web_accessible_resources": [
+		"newtab.html"
+	]
 }
