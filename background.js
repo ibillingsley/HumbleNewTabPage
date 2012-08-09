@@ -14,7 +14,8 @@ function storeTab(tab) {
 
 // send message to newtab page to refresh closed list
 function notifyChange() {
-	chrome.extension.sendMessage('tab.closed');
+	if (chrome.extension.sendMessage)
+		chrome.extension.sendMessage('tab.closed');
 }
 
 // clear recently closed list

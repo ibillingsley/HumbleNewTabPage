@@ -2,6 +2,8 @@ This extension replaces the default new tab page with a nicer one.
 
 Your bookmarks, apps, most visited sites, recently closed tabs, and weather forecast are shown in a column. Drag and drop folders to create new columns or reorder them. The font, colors, spacing, and more can be customized from the options menu.
 
+Version 1.3 - August 9, 2012
+• fixed bug with old Chrome versions
 
 Version 1.2 - August 8, 2012
 • added apps, most visited, recently closed, and weather

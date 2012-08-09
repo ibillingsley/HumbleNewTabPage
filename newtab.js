@@ -496,9 +496,12 @@ function getChildrenFunction(node) {
 	switch(node.id) {
 		case 'top':
 			return function(callback) {
-				chrome.topSites.get(function(result) {
-					callback(result);
-				});
+				if (chrome.topSites)
+					chrome.topSites.get(function(result) {
+						callback(result);
+					});
+				else
+					callback([]);
 			};
 		case 'apps':
 			return function(callback) {
@@ -1339,10 +1342,11 @@ function init() {
 	loadColumns();
 
 	// refresh recently closed on tab close
-	chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
-		if (request == 'tab.closed')
-			refreshClosed();
-	});
+	if (chrome.extension.onMessage)
+		chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
+			if (request == 'tab.closed')
+				refreshClosed();
+		});
 
 	// fix scrollbar jump
 	window.onresize = function(event) {
