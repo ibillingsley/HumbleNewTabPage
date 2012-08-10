@@ -292,9 +292,17 @@ function renderMenu(items, x, y) {
 	document.body.appendChild(ul);
 	ul.style.left = Math.max(Math.min(x, window.innerWidth + window.scrollX - ul.clientWidth), 0) + 'px';
 	ul.style.top = Math.max(Math.min(y, window.innerHeight + window.scrollY - ul.clientHeight), 0) + 'px';
+	ul.onmousedown = function(event) {
+		event.stopPropagation();
+		return true;
+	}
 
 	setTimeout(function() {
 		document.onclick = function() {
+			closeMenu(ul);
+			return true;
+		};
+		document.onmousedown = function() {
 			closeMenu(ul);
 			return true;
 		};
@@ -315,6 +323,7 @@ function renderMenu(items, x, y) {
 function closeMenu(ul) {
 	document.body.removeChild(ul);
 	document.onclick = null;
+	document.onmousedown = null;
 	document.oncontextmenu = null;
 	document.onkeydown = null;
 }
@@ -431,6 +440,8 @@ function enableDragDrop() {
 
 // gets proper drop target element
 function getDropTarget(event) {
+	if (!dragIds)
+		return null;
 	var target = event.target;
 	if (target && target.tagName == 'A' && dragIds.length == 1) {
 		// get parent folder until toplevel
@@ -770,10 +781,13 @@ function loadColumns() {
 		chrome.bookmarks.getTree(function(result) {
 			// init root nodes
 			var nodes = result[0].children;
+			var special = ['top', 'apps', 'recent', 'weather', 'closed'];
 			root = [];
 			for (var i = 0; i < nodes.length; i++)
 				root.push(nodes[i].id);
-			root.push('top', 'apps', 'recent', 'weather', 'closed');
+			for (var i = 0; i < special.length; i++)
+				if (getConfig('show_' + special[i]))
+					root.push(special[i]);
 			verifyColumns();
 			renderColumns();
 		});
@@ -1032,7 +1046,12 @@ var config = {
 	hide_options: 0,
 	lock: 0,
 	weather_location: 'Toronto, ON',
-	weather_units: 'en-gb'
+	weather_units: 'en-gb',
+	show_top: 1,
+	show_apps: 1,
+	show_recent: 1,
+	show_weather: 1,
+	show_closed: 1
 };
 
 // color theme values
@@ -1135,6 +1154,7 @@ function setConfig(key, value) {
 		localStorage.removeItem('options.' + key);
 		value = (theme.hasOwnProperty(key) ? theme[key] : config[key]);
 	}
+	// special case settings
 	if (key.substring(0, 7) == 'weather')
 			refreshWeather();
 	else if (key == 'lock')
@@ -1146,6 +1166,18 @@ function setConfig(key, value) {
 				onChange(i);
 				showConfig(i);
 			}
+		}
+	} else if (key.substring(0,4) == 'show') {
+		var id = key.substring(5);
+		var i = root.indexOf(id);
+		if (i > -1 && !value) {
+			root.splice(i, 1);
+			if (coords[id])
+				removeRow(coords[id].x, coords[id].y);
+			saveColumns();
+		} else if (value) {
+			root.push(id);
+			saveColumns();
 		}
 	}
 	onChange(key, value);
@@ -1162,14 +1194,9 @@ function getStyle(key, value) {
 		case 'font_size':
 			return '#main a { font-size: ' + (value / 10) + 'em; }';
 		case 'font_color':
-			return '#main a { color: ' + value + '; }' + 
-				   '#options_font_color { background-color: ' + value + '; }' +
-				   '#options_background_color { color: ' + value + '; }';
+			return '#main a { color: ' + value + '; }';
 		case 'background_color':
-			return 'body { background-color: ' + value + '; }' + 
-				   '#options_font_color { color: ' + value + '; }' +
-				   '#options_background_color { background-color: ' + value + '; }' +
-				   '#options_shadow_color { color: ' + value + '; }';
+			return 'body { background-color: ' + value + '; }';
 		case 'background_image':
 			return 'body { background-image: url(' + value + '); }';
 		case 'background_align':
@@ -1177,16 +1204,11 @@ function getStyle(key, value) {
 		case 'background_repeat':
 			return 'body { background-repeat: ' + value + '; }';
 		case 'highlight_font_color':
-			return '#main a:hover { color: ' + value + '; }' + 
-				   '#options_highlight_font_color { background-color: ' + value + '; }' +
-				   '#options_highlight_color { color: ' + value + '; }';
+			return '#main a:hover { color: ' + value + '; }';
 		case 'highlight_color':
-			return '#main a:hover { background-color: ' + value + '; }' + 
-				   '#options_highlight_font_color { color: ' + value + '; }' +
-				   '#options_highlight_color { background-color: ' + value + '; }';
+			return '#main a:hover { background-color: ' + value + '; }';
 		case 'shadow_color':
-			return '#main a:hover { box-shadow: 0 0 ' + scale(getConfig('shadow_blur'), 7, 100) + 'px ' + value + '; }' + 
-				   '#options_shadow_color { background-color: ' + value + '; }';
+			return '#main a:hover { box-shadow: 0 0 ' + scale(getConfig('shadow_blur'), 7, 100) + 'px ' + value + '; }';
 		case 'shadow_blur':
 			return '#main a:hover { box-shadow: 0 0 ' + scale(value, 7, 100) + 'px ' + getConfig('shadow_color') + '; }';
 		case 'highlight_round':

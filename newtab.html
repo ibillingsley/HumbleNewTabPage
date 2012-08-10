@@ -55,9 +55,6 @@ body {
 	box-shadow: 0 0 7px #57B0FF;
 }
 .wrap {
-/*	overflow: hidden;
-	padding: 7px;
-	margin: -7px -7px -7px 0;*/
 	-webkit-transition-property: height, opacity;
 	-webkit-transition-duration: 0.2s;
 	-webkit-transition-timing-function: ease-out;
@@ -203,26 +200,6 @@ input, select {
 	height: 32px;
 	opacity: 0.5;
 }
-#options_font_color {
-	background-color: #555555; 
-	color: #ffffff; 
-}
-#options_background_color {
-	background-color: #ffffff;
-	color: #555555; 
-}
-#options_highlight_font_color {
-	background-color: #000000; 
-	color: #E4F4FF; 
-}
-#options_highlight_color {
-	background-color: #E4F4FF; 
-	color: #000000; 
-}
-#options_shadow_color {
-	background-color: #57B0FF; 
-	color: #ffffff; 
-}
 </style>
 <script src="newtab.js"></script>
 </head>
@@ -263,6 +240,11 @@ input, select {
 			<option value="no-repeat">None</option>
 		</select></label>
 	</fieldset>
+	<fieldset>
+		<legend>Highlight</legend>
+		<label>Shadow size<input id="options_shadow_blur" type="range" min="0" max="2" step="0.001"/></label>
+		<label>Corner roundness<input id="options_highlight_round" type="range" min="0" max="2" step="0.001"/></label>
+	</fieldset>
 	</div><div>
 	<fieldset>
 		<legend>Weather</legend>
@@ -273,9 +255,12 @@ input, select {
 		</select></label>
 	</fieldset>
 	<fieldset>
-		<legend>Highlight</legend>
-		<label>Shadow size<input id="options_shadow_blur" type="range" min="0" max="2" step="0.001"/></label>
-		<label>Corner roundness<input id="options_highlight_round" type="range" min="0" max="2" step="0.001"/></label>
+		<legend>Content</legend>
+		<label>Show Most visited<input id="options_show_top" type="checkbox"/></label>
+		<label>Show Apps<input id="options_show_apps" type="checkbox"/></label>
+		<label>Show Recent bookmarks<input id="options_show_recent" type="checkbox"/></label>
+		<label>Show Weather<input id="options_show_weather" type="checkbox"/></label>
+		<label>Show Recently closed<input id="options_show_closed" type="checkbox"/></label>
 	</fieldset>
 	<fieldset>
 		<legend>Animation</legend>
