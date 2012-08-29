@@ -40,7 +40,7 @@ function cacheWeather(data, url) {
 		weather = null;
 		weatherUrl = null;
 		expireHandle = null;
-	}, 1000*60*5);// cache 5 minutes
+	}, 1000*60*15);// cache 15 minutes
 }
 
 // store initial tabs

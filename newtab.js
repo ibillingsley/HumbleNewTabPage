@@ -921,11 +921,12 @@ function refreshClosed() {
 	});
 }
 
-// gets weather info from unofficial google api
+// gets weather info from yahoo weather api using YQL
 function getWeather(callback) {
-	var url = 'http://www.google.com/ig/api?weather=' + 
-		encodeURIComponent(getConfig('weather_location')) + 
-		'&hl=' + getConfig('weather_units');
+	var query = 'select * from weather.forecast where u="' + getConfig('weather_units') +
+		'" and woeid in (select woeid from geo.places where text="' + getConfig('weather_location') + '") limit 1;';
+
+	var url = 'http://query.yahooapis.com/v1/public/yql?format=json&q=' + encodeURIComponent(query);
 
 	// check cache
 	var bg = chrome.extension.getBackgroundPage();
@@ -950,44 +951,51 @@ function getWeather(callback) {
 
 	request.onload = function(event) {
 		var nodes = [];
-		var response = request.responseXML;
-		var isC = getConfig('weather_units') == 'en-gb';
-
-		var current = response.getElementsByTagName('current_conditions')[0];
-
-		// validate
-		if (!current) {
+		var response = request.response;
+		if (!response) {
 			onerror();
 			return;
 		}
+		response = JSON.parse(response);
+		// validate
+		if (!response || !response.query || !response.query.results) {
+			onerror();
+			return;
+		}
+
+		var response = response.query.results.channel;
+		var current = response.item.condition;
+		var location = response.location;
+		if (!current || !location) {
+			onerror();
+			return;
+		}
+
 		// correct location value
-		var city = getWeatherData(response, 'city');
+		var city = location.city + (location.region ? ', ' + location.region : '') + ', ' + location.country;
 		if (city != getConfig('weather_location')) {
 			var input = document.getElementById('options_weather_location');
 			input.value = city;
 			input.onchange();
-			callback([]);
 			return;
 		}
 
 		// current conditions
 		var parentnode = {
 			id: 'weather',
-			title: getWeatherData(current, isC ? 'temp_c' : 'temp_f') + '°' +
-				(isC ? 'C' : 'F') + ' ' + 
-				getWeatherData(current, 'condition'),
-			icon: 'http://www.google.com' + getWeatherData(current, 'icon')
+			title: current.temp + '°' + (getConfig('weather_units') == 'c' ? 'C' : 'F') + ' ' + current.text,
+			icon: 'http://l.yimg.com/a/i/us/we/52/' + current.code + '.gif'
 		};
 
 		// forecast
-		var forecast = response.getElementsByTagName('forecast_conditions');
+		var forecast = response.item.forecast;
 		for (var i = 0; i < forecast.length; i++) {
 			nodes.push({
-				title: getWeatherData(forecast[i], 'day_of_week') + ' ' +
-				 getWeatherData(forecast[i], 'low') + '° | ' + 
-				 getWeatherData(forecast[i], 'high') + '° ' +
-				 getWeatherData(forecast[i], 'condition'),
-				icon: 'http://www.google.com' + getWeatherData(forecast[i], 'icon')
+				title: forecast[i].day + ' ' +
+					forecast[i].low + '° | ' + 
+					forecast[i].high + '° ' +
+					forecast[i].text,
+				icon: 'http://l.yimg.com/a/i/us/we/52/' + forecast[i].code + '.gif'
 			});
 		}
 		parentnode.children = nodes;
@@ -1000,11 +1008,6 @@ function getWeather(callback) {
 
 	request.open('GET', url, true);
 	request.send();
-}
-
-// gets xml node data
-function getWeatherData(parent, tag) {
-	return parent.getElementsByTagName(tag)[0].attributes.data.value;
 }
 
 // refreshes weather items
@@ -1045,8 +1048,8 @@ var config = {
 	slide: 1,
 	hide_options: 0,
 	lock: 0,
-	weather_location: 'Toronto, ON',
-	weather_units: 'en-gb',
+	weather_location: 'Toronto, ON, Canada',
+	weather_units: 'c',
 	show_top: 1,
 	show_apps: 1,
 	show_recent: 1,
@@ -1302,7 +1305,7 @@ function initConfig(key) {
 // initialize settings
 function initSettings() {
 	// check if experimental enabled
-	if (chrome.experimental) {
+	if (chrome.fontSettings) {
 		// replace text input with system font list
 		var input = document.getElementById('options_font');
 		var select = document.createElement('select');
@@ -1339,15 +1342,15 @@ function initSettings() {
 	}
 
 	// load font list
-	if (chrome.experimental) {
-		chrome.experimental.fontSettings.getFontList(function(fonts)  {
+	if (chrome.fontSettings) {
+		chrome.fontSettings.getFontList(function(fonts)  {
 			var select = document.getElementById('options_font');
 			if (select.childNodes.length > 0)
 				return;
 
-			fonts.unshift({ fontName: 'Sans-serif' });
+			fonts.unshift({ fontId: 'Sans-serif' });
 			for (var i = 0; i < fonts.length; i++) {
-				var font = fonts[i].fontName;
+				var font = fonts[i].fontId;
 				var option = document.createElement('option');
 				option.innerText = font;
 				if (font == getConfig('font'))
