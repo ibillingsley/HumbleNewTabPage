@@ -12,6 +12,9 @@ function render(node, target) {
 	if (icon)
 		a.style.backgroundImage = 'url(' + icon + ')';
 
+	if (url && getConfig('newtab'))
+		a.target = '_blank';
+
 	if (!url && !node.children)
 		a.style.pointerEvents = 'none';
 
@@ -924,7 +927,7 @@ function refreshClosed() {
 // gets weather info from yahoo weather api using YQL
 function getWeather(callback) {
 	var query = 'select * from weather.forecast where u="' + getConfig('weather_units') +
-		'" and woeid in (select woeid from geo.places where text="' + getConfig('weather_location') + '") limit 1;';
+		'" and woeid in (select woeid from geo.placefinder where text="' + getConfig('weather_location') + '" and focus="" limit 1) limit 1';
 
 	var url = 'http://query.yahooapis.com/v1/public/yql?format=json&q=' + encodeURIComponent(query);
 
@@ -992,8 +995,8 @@ function getWeather(callback) {
 		for (var i = 0; i < forecast.length; i++) {
 			nodes.push({
 				title: forecast[i].day + ' ' +
-					forecast[i].low + '° | ' + 
-					forecast[i].high + '° ' +
+					forecast[i].high + '° | ' + 
+					forecast[i].low + '° ' +
 					forecast[i].text,
 				icon: 'http://l.yimg.com/a/i/us/we/52/' + forecast[i].code + '.gif'
 			});
@@ -1036,8 +1039,9 @@ var config = {
 	highlight_color: '#E4F4FF',
 	highlight_font_color: '#000000',
 	shadow_color: '#57B0FF',
+	background_image_file: '',
 	background_image: '',
-	background_align: 'top',
+	background_align: 'left top',
 	background_repeat: 'repeat',
 	shadow_blur: 1,
 	highlight_round: 1,
@@ -1054,7 +1058,8 @@ var config = {
 	show_apps: 1,
 	show_recent: 1,
 	show_weather: 1,
-	show_closed: 1
+	show_closed: 1,
+	newtab: 0
 };
 
 // color theme values
@@ -1158,9 +1163,7 @@ function setConfig(key, value) {
 		value = (theme.hasOwnProperty(key) ? theme[key] : config[key]);
 	}
 	// special case settings
-	if (key.substring(0, 7) == 'weather')
-			refreshWeather();
-	else if (key == 'lock')
+	if (key == 'lock' || key == 'newtab')
 		loadColumns();
 	else if (key == 'theme') {
 		theme = themes[value];
@@ -1170,6 +1173,8 @@ function setConfig(key, value) {
 				showConfig(i);
 			}
 		}
+	} else if (key.substring(0, 7) == 'weather') {
+		refreshWeather();
 	} else if (key.substring(0,4) == 'show') {
 		var id = key.substring(5);
 		var i = root.indexOf(id);
@@ -1201,6 +1206,8 @@ function getStyle(key, value) {
 		case 'background_color':
 			return 'body { background-color: ' + value + '; }';
 		case 'background_image':
+			return 'body { background-image: url(' + value + '); }';
+		case 'background_image_file':
 			return 'body { background-image: url(' + value + '); }';
 		case 'background_align':
 			return 'body { background-position: ' + value + '; }';
@@ -1286,7 +1293,24 @@ function showConfig(key) {
 function initConfig(key) {
 	var input = document.getElementById('options_' + key);
 	input.onchange = function(event) {
-		setConfig(key, input.type === 'checkbox' ? Number(input.checked) : input.value);
+		if (input.type == 'file') {
+			// load file
+			if (event.target.files.length == 1) {
+				var file = event.target.files[0];
+				if (file.size > 2097152) {
+					input.value = null;
+					alert('Image must be less than 2 MB.');
+					return false;
+				}
+				var reader = new FileReader();
+				reader.onload = function(f) {
+					if (f.target.result)
+						setConfig(key, f.target.result);
+				};
+				reader.readAsDataURL(file);	
+			}
+		} else
+			setConfig(key, input.type == 'checkbox' ? Number(input.checked) : input.value);
 	};
 	
 	var button = document.createElement('button');

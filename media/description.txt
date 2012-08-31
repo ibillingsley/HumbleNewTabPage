@@ -1,7 +1,10 @@
-This extension replaces the default new tab page with a nicer one.
+This extension replaces the default new tab page. Drag and drop folders to create new columns or reorder them. The font, colors, spacing, and more can be customized from the options menu.
 
-Your bookmarks, apps, most visited sites, recently closed tabs, and weather forecast are shown in a column. Drag and drop folders to create new columns or reorder them. The font, colors, spacing, and more can be customized from the options menu.
 
+Version 1.6 - August 30, 2012
+• added option to open links in new tabs
+• support local file for background image
+• weather errors fixed
 
 Version 1.5 - August 29, 2012
 • weather forecast now uses Yahoo (Google discontinued their weather service without warning)

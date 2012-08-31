@@ -8,7 +8,7 @@
 body {
 	background-color: #ffffff;
 	background-attachment: fixed;
-	background-position: top;
+	background-position: left top;
 	margin: 0;
 	overflow-x: hidden;
 	font-family: sans-serif;
@@ -227,11 +227,18 @@ input, select {
 	</fieldset>
 	<fieldset>
 		<legend>Background</legend>
+		<label>Image<input id="options_background_image_file" type="file" accept="image/*"/></label>
 		<label>Image URL<input id="options_background_image" type="text"/></label>
 		<label>Image align<select id="options_background_align">
+			<option value="left top">Top left</option>
 			<option value="top">Top</option>
+			<option value="right top">Top right</option>
+			<option value="left">Left</option>
 			<option value="center">Center</option>
+			<option value="right">Right</option>
+			<option value="left bottom">Bottom left</option>
 			<option value="bottom">Bottom</option>
+			<option value="right bottom">Bottom right</option>
 		</select></label>
 		<label>Image tiling<select id="options_background_repeat">
 			<option value="repeat">Tile</option>
@@ -241,11 +248,22 @@ input, select {
 		</select></label>
 	</fieldset>
 	<fieldset>
+		<legend>Layout</legend>
+		<label>Item spacing<input id="options_spacing" type="range" min="0" max="2" step="0.001"/></label>
+		<label>Horizontal margin<input id="options_h_margin" type="range" min="0" max="2" step="0.001"/></label>
+		<label>Vertical margin<input id="options_v_margin" type="range" min="0" max="2" step="0.001"/></label>
+	</fieldset>
+	</div><div>
+	<fieldset>
 		<legend>Highlight</legend>
 		<label>Shadow size<input id="options_shadow_blur" type="range" min="0" max="2" step="0.001"/></label>
 		<label>Corner roundness<input id="options_highlight_round" type="range" min="0" max="2" step="0.001"/></label>
 	</fieldset>
-	</div><div>
+	<fieldset>
+		<legend>Animation</legend>
+		<label>Highlight fade time<input id="options_fade" type="range" min="0" max="2" step="0.001"/></label>
+		<label>Folder open time<input id="options_slide" type="range" min="0" max="2" step="0.001"/></label>
+	</fieldset>
 	<fieldset>
 		<legend>Weather</legend>
 		<label>Location<input id="options_weather_location" type="text"/></label>
@@ -263,15 +281,8 @@ input, select {
 		<label>Show Recently closed<input id="options_show_closed" type="checkbox"/></label>
 	</fieldset>
 	<fieldset>
-		<legend>Animation</legend>
-		<label>Highlight fade time<input id="options_fade" type="range" min="0" max="2" step="0.001"/></label>
-		<label>Folder open time<input id="options_slide" type="range" min="0" max="2" step="0.001"/></label>
-	</fieldset>
-	<fieldset>
-		<legend>Layout</legend>
-		<label>Item spacing<input id="options_spacing" type="range" min="0" max="2" step="0.001"/></label>
-		<label>Horizontal margin<input id="options_h_margin" type="range" min="0" max="2" step="0.001"/></label>
-		<label>Vertical margin<input id="options_v_margin" type="range" min="0" max="2" step="0.001"/></label>
+		<legend>Settings</legend>
+		<label>Open links in new tab<input id="options_newtab" type="checkbox"/></label>
 		<label>Hide options button<input id="options_hide_options" type="checkbox"/></label>
 		<label>Lock columns<input id="options_lock" type="checkbox"/></label>
 	</fieldset>
