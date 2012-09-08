@@ -1,6 +1,10 @@
 This extension replaces the default new tab page. Drag and drop folders to create new columns or reorder them. The font, colors, spacing, and more can be customized from the options menu.
 
 
+Version 1.7 - September 8, 2012
+• added custom CSS field for advanced users
+• added option to hide Bookmarks bar and Other bookmarks
+
 Version 1.6 - August 30, 2012
 • added option to open links in new tabs
 • support local file for background image

@@ -787,7 +787,8 @@ function loadColumns() {
 			var special = ['top', 'apps', 'recent', 'weather', 'closed'];
 			root = [];
 			for (var i = 0; i < nodes.length; i++)
-				root.push(nodes[i].id);
+				if (getConfig('show_' + nodes[i].id) != false)
+					root.push(nodes[i].id);
 			for (var i = 0; i < special.length; i++)
 				if (getConfig('show_' + special[i]))
 					root.push(special[i]);
@@ -941,7 +942,8 @@ function getWeather(callback) {
 	// show loading...
 	callback([{ id: 'weather', title: 'Loading weather...', children: true }]);
 
-	var onerror = function() {
+	var onerror = function(event) {
+		console.log(event);
 		var targets = document.getElementsByClassName('weather');
 		for (var i = 0; i < targets.length; i++){
 			targets[i].innerText = 'Error loading weather';
@@ -962,7 +964,7 @@ function getWeather(callback) {
 		response = JSON.parse(response);
 		// validate
 		if (!response || !response.query || !response.query.results) {
-			onerror();
+			onerror(response);
 			return;
 		}
 
@@ -970,7 +972,7 @@ function getWeather(callback) {
 		var current = response.item.condition;
 		var location = response.location;
 		if (!current || !location) {
-			onerror();
+			onerror(response);
 			return;
 		}
 
@@ -1054,12 +1056,15 @@ var config = {
 	lock: 0,
 	weather_location: 'Toronto, ON, Canada',
 	weather_units: 'c',
+	show_1: 1,
+	show_2: 1,
 	show_top: 1,
 	show_apps: 1,
 	show_recent: 1,
 	show_weather: 1,
 	show_closed: 1,
-	newtab: 0
+	newtab: 0,
+	css: '#main a {\n/*links*/\n}\nbody {\n/*backgroud*/\n}\n.column {\n/*columns*/\n}'
 };
 
 // color theme values
@@ -1238,6 +1243,8 @@ function getStyle(key, value) {
 			return '#main { padding-top: ' + scale(value, 85, 340) + 'px; }';
 		case 'hide_options':
 			return '#options_button { opacity: 0; }';
+		case 'css':
+			return value;
 		default:
 			return null;
 	}
