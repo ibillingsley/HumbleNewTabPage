@@ -1,3 +1,5 @@
+'use strict';
+
 // render a single bookmark node
 function render(node, target) {
 	var li = document.createElement('li');
@@ -6,16 +8,25 @@ function render(node, target) {
 	var url = node.url || node.appLaunchUrl;
 	a.href = url || '#';
 	a.innerText = node.title || node.name;
-	a.className = getClass(node);
+	setClass(a, node);
 
-	var icon = getIcon(node);
-	if (icon)
-		a.style.backgroundImage = 'url(' + icon + ')';
+	a.insertBefore(getIcon(node), a.firstChild);
 
-	if (url && getConfig('newtab'))
-		a.target = '_blank';
-
-	if (!url && !node.children)
+	if (url) {
+		var newtab = getConfig('newtab');
+		if (newtab == 1) {
+			// new foreground tab
+			a.target = '_blank';
+		} else if (newtab == 2) {
+			// new background tab
+			a.onclick = function(event) {
+				chrome.tabs.getCurrent(function(tab) {
+					chrome.tabs.create({url: url, active: false, openerTabId: tab.id});
+				});
+				return false;
+			};
+		}
+	} else if (!node.children)
 		a.style.pointerEvents = 'none';
 
 	li.appendChild(a);
@@ -24,7 +35,8 @@ function render(node, target) {
 	if (node.children) {
 		// render children
 		if (localStorage.getItem('open.' + node.id)) {
-			a.className = getClass(node, true);
+			setClass(a, node, true);
+			a.open = true;
 			getChildrenFunction(node)(function(result) {
 				renderAll(result, li);
 			});
@@ -50,14 +62,21 @@ function renderAll(nodes, target, toplevel) {
 	}
 	if (ul.childNodes.length == 0)
 		render({ id: 'empty', title: '< Empty >' }, ul);
-	target.appendChild(ul);
+	if (toplevel)
+		target.appendChild(ul);
+	else {
+		// wrap child ul for animation
+		var wrap = document.createElement('div');
+		wrap.appendChild(ul);
+		target.appendChild(wrap);
+	}
 	return ul;
 }
 
 // render column with given index
 function renderColumn(index, target) {
 	var ids = columns[index];
-	if (ids.length == 1 && ids[0] != 'weather')
+	if (ids.length == 1 && ids[0] != 'weather' && !getConfig('show_root'))
 		getChildrenFunction({id: ids[0]})(function(result) {
 			renderAll(result, target);
 			addColumnHandlers(index, target);
@@ -169,7 +188,7 @@ function addHandlers(node, a) {
 	a.oncontextmenu = function(event) {
 		renderMenu(items, event.pageX, event.pageY);
 		return false;
-	}
+	};
 }
 
 // enables context menu for given column
@@ -224,11 +243,11 @@ function addColumnHandlers(index, ul) {
 
 	if (items.length > 0)
 		ul.oncontextmenu = function(event) {
-			if (event.target.tagName == 'A')
+			if (event.target.tagName == 'A' || event.target.parentNode.tagName == 'A')
 				return true;
 			renderMenu(items, event.pageX, event.pageY);
 			return false;
-		}
+		};
 }
 
 // gets context menu items for given node
@@ -289,6 +308,8 @@ function renderMenu(items, x, y) {
 			li.appendChild(a);
 		} else if (i > 0 && i < items.length - 1)
 			li.appendChild(document.createElement('hr'));
+		else
+			continue;
 
 		ul.appendChild(li);
 	}
@@ -298,7 +319,7 @@ function renderMenu(items, x, y) {
 	ul.onmousedown = function(event) {
 		event.stopPropagation();
 		return true;
-	}
+	};
 
 	setTimeout(function() {
 		document.onclick = function() {
@@ -312,7 +333,7 @@ function renderMenu(items, x, y) {
 		document.oncontextmenu = function() {
 			closeMenu(ul);
 			return true;
-		}
+		};
 		document.onkeydown = function(event) {
 			if (event.keyCode == 27)
 				closeMenu(ul);
@@ -349,7 +370,7 @@ function enableDragColumn(id, column) {
 		dragIds = null;
 		this.classList.remove('dragstart');
 		clearDropTarget();
-	}
+	};
 }
 
 var dropTarget;
@@ -370,7 +391,7 @@ function enableDragFolder(node, a) {
 		dragIds = null;
 		this.classList.remove('dragstart');
 		clearDropTarget();
-	}
+	};
 }
 
 // init drag and drop handlers
@@ -412,11 +433,11 @@ function enableDragDrop() {
 			}
 		}
 		return false;
-	}
+	};
 
 	main.ondragleave = function(event) {
 		clearDropTarget();
-	}
+	};
 
 	main.ondrop = function(event) {
 		event.stopPropagation();
@@ -438,7 +459,7 @@ function enableDragDrop() {
 		}
 		
 		return false;
-	}
+	};
 }
 
 // gets proper drop target element
@@ -446,7 +467,7 @@ function getDropTarget(event) {
 	if (!dragIds)
 		return null;
 	var target = event.target;
-	if (target && target.tagName == 'A' && dragIds.length == 1) {
+	if (target && (target.tagName == 'A' || target.parentNode.tagName == 'A') && dragIds.length == 1) {
 		// get parent folder until toplevel
 		while (target && 
 			target.parentNode.parentNode &&
@@ -539,13 +560,13 @@ function getChildrenFunction(node) {
 			if (node.children)
 				return function(callback) {
 					callback(node.children);
-				}
+				};
 			else
 				return function(callback) {
 					getWeather(function(result) {
 						callback(result[0].children);
 					});
-				}
+				};
 		default:
 			if  (node.children)
 				return function(callback) {
@@ -599,36 +620,30 @@ function getSubTree(id, callback) {
 	}
 }
 
-// gets css class for node
-function getClass(node, isopen) {
+// sets css classes for node
+function setClass(target, node, isopen) {
+	if (node.children)
+		target.classList.add('folder');
+	if (isopen)
+		target.classList.add('open');
+	else
+		target.classList.remove('open');
+
 	switch(node.id) {
 		case 'top':
-			return 'folder top';
 		case 'apps':
-			return 'folder apps';
 		case 'recent':
-			return 'folder recent';
 		case 'closed':
-			return 'folder closed';
 		case 'weather':
-			return 'folder weather';
 		case 'empty':
-			return 'empty';
-		default:
-			if (node.children) {
-				if (isopen)
-					return 'folder open';
-				else
-					return 'folder';
-			} else
-				return null;
+			target.classList.add(node.id);
 	}
 }
 
-// gets best icon for an node
+// gets best icon for a node
 function getIcon(node) {
+	var url = null;
 	if (node.icons) {
-		var url;
 		var size;
 		for (var i in node.icons) {
 			var icon = node.icons[i];
@@ -637,28 +652,51 @@ function getIcon(node) {
 				size = icon.size;
 			}
 		}
-		if (url)
-			return url;
 	} else if (node.icon)
-		return node.icon;
+		url = node.icon;
 	else if (node.url || node.appLaunchUrl)
-		return 'chrome://favicon/' + (node.url || node.appLaunchUrl);
+		url = 'chrome://favicon/' + (node.url || node.appLaunchUrl);
 
-	return null;
+	var icon = document.createElement(url ? 'img' : 'div');
+	icon.className = 'icon';
+	icon.src = url;
+	icon.alt = '';
+	return icon;
 }
 
 // toggle folder open state
 function toggle(node, a) {
 	var isopen = localStorage.getItem('open.' + node.id);
-	a.className = getClass(node, !isopen);
-
+	setClass(a, node, !isopen);
+	a.open = !isopen;
 	if (isopen) {
 		// close folder
 		localStorage.removeItem('open.' + node.id);
-		if (a.nextSibling)
+		if (a.nextSibling){
+			// auto-close child folders
+			if (getConfig('auto_close')) {
+				var children = (a.nextSibling.tagName == 'DIV' ? a.nextSibling.firstChild : a.nextSibling).children;
+				for (var i=0; i<children.length; i++) {
+					var child = children[i].firstChild;
+					if (child.open)
+						child.onclick();
+				}
+			}
+			// close folder
 			animate(node, a, isopen);
+		}
 	} else {
+		// open folder
 		localStorage.setItem('open.' + node.id, true);
+		// auto-close sibling folders
+		if (getConfig('auto_close')) {
+			var siblings = a.parentNode.parentNode.children;
+			for (var i=0; i<siblings.length; i++) {
+				var sibling = siblings[i].firstChild;
+				if (sibling != a && sibling.open)
+					sibling.onclick();
+			}
+		}
 		// open folder
 		if (a.nextSibling)
 			animate(node, a, isopen);
@@ -672,51 +710,39 @@ function toggle(node, a) {
 	}
 }
 
-var toggleAction;
-var toggleHandle;
-var wrap;
-
 // smoothly open or close folder
 function animate(node, a, isopen) {
-	// finish last animation
-	if (toggleAction) {
-		clearTimeout(toggleHandle);
-		if (wrap != a.nextSibling)
-			toggleAction();
-		toggleAction = null;
-	}
-	var target = a.parentNode;
-	// wrapper for animation
-	if (!wrap) {
-		wrap = document.createElement('div');
-		wrap.style.height = isopen ? a.nextSibling.clientHeight + 'px' : 0;
+	// TODO: fix nested animations
+	// wrapper needed for inner height value
+	var wrap = a.nextSibling;
+	if (a.toggleAction) {
+		// clear last animation
+		clearTimeout(a.toggleHandle);
+		a.toggleAction = null;
+	} else {
+		// start animation
+		wrap.style.height = isopen ? wrap.firstChild.clientHeight + 'px' : 0;
 		wrap.style.opacity = isopen ? 1 : 0;
-		wrap.appendChild(a.nextSibling);
-		target.appendChild(wrap);	
 	}
-	wrap.className = 'wrap';
-	wrap.style.pointerEvents = isopen ? 'none' : null;
 
 	setTimeout(function() {
+		wrap.className = 'wrap';
 		wrap.style.height = isopen ? 0 : wrap.firstChild.clientHeight + 'px';
 		wrap.style.opacity = isopen ? 0 : 1;
+		wrap.style.pointerEvents = isopen ? 'none' : null;
 	}, 0);
 
-	toggleAction = function() {
+	a.toggleAction = function() {
 		if (isopen)
-			target.removeChild(wrap);
+			a.parentNode.removeChild(wrap);
 		else {
 			wrap.className = null;
-			wrap.style.height = null;	
-			// removing wrapper messes up in-progress click events...
-			// target.appendChild(wrap.firstChild);
-			// target.removeChild(wrap);
+			wrap.removeAttribute('style');
 		}	
-		toggleAction = null;
-		wrap = null;
+		a.toggleAction = null;
 	};
 	var duration = scale(getConfig('slide'), .2, 1) * 1000;
-	toggleHandle = setTimeout(toggleAction, duration);
+	a.toggleHandle = setTimeout(a.toggleAction, duration);
 }
 
 // opens immediate children of given node in new tabs
@@ -891,11 +917,11 @@ function getClosed(callback) {
 
 	for (var i = 0; i < size; i++) {
 		var index = (start - i + size) % size;
-		url = localStorage.getItem('closed.' + index + '.url');
+		var url = localStorage.getItem('closed.' + index + '.url');
 		if (!url)
 			break;
 
-		title = localStorage.getItem('closed.' + index + '.title');
+		var title = localStorage.getItem('closed.' + index + '.title');
 		closed.push({url: url, title: title});
 	}
 
@@ -946,7 +972,7 @@ function getWeather(callback) {
 		console.log(event);
 		var targets = document.getElementsByClassName('weather');
 		for (var i = 0; i < targets.length; i++){
-			targets[i].innerText = 'Error loading weather';
+			targets[i].childNodes[1].nodeValue = 'Error loading weather';
 			targets[i].classList.add('error');
 		}
 	};
@@ -1038,9 +1064,9 @@ var config = {
 	theme: 'Default',
 	font_color: '#555555',
 	background_color: '#ffffff',
-	highlight_color: '#E4F4FF',
+	highlight_color: '#e4f4ff',
 	highlight_font_color: '#000000',
-	shadow_color: '#57B0FF',
+	shadow_color: '#57b0ff',
 	background_image_file: '',
 	background_image: '',
 	background_align: 'left top',
@@ -1049,7 +1075,8 @@ var config = {
 	highlight_round: 1,
 	fade: 1,
 	spacing: 1,
-	h_margin: 1,
+	width: 1,
+	h_pos: 1,
 	v_margin: 1,
 	slide: 1,
 	hide_options: 0,
@@ -1063,8 +1090,11 @@ var config = {
 	show_recent: 1,
 	show_weather: 1,
 	show_closed: 1,
+	show_root: 0,
 	newtab: 0,
-	css: '#main a {\n/*links*/\n}\nbody {\n/*backgroud*/\n}\n.column {\n/*columns*/\n}'
+	auto_close: 0,
+	auto_scale: 1,
+	css: ''
 };
 
 // color theme values
@@ -1168,7 +1198,7 @@ function setConfig(key, value) {
 		value = (theme.hasOwnProperty(key) ? theme[key] : config[key]);
 	}
 	// special case settings
-	if (key == 'lock' || key == 'newtab')
+	if (key == 'lock' || key == 'newtab' || key == 'show_root')
 		loadColumns();
 	else if (key == 'theme') {
 		theme = themes[value];
@@ -1233,18 +1263,26 @@ function getStyle(key, value) {
 		case 'slide':
 			return '.wrap { -webkit-transition-duration: ' + scale(value, .2, 1) + 's; }';
 		case 'spacing':
-			return '#main a { line-height: ' + scale(value, 2, 5.6, .8) + '; } ' +
-				   '#main a { border-left-width: ' + scale(value, .8, 2, .4) + 'em; }' +
-				   '#main a { padding-right: ' + scale(value, .8, 2, .4) + 'em; }';
-		case 'h_margin':
-			return '#main { padding-left: ' + scale(value, 10, 40) + '%; } ' +
-				   '#main { padding-right: ' + scale(value, 10, 40) + '%; }';
+			return '#main a { line-height: ' + scale(value, 2, 5.6, .8) + '; ' +
+							'padding-left: ' + scale(value, .8, 2, .4) + 'em; ' +
+							'padding-right: ' + scale(value, .8, 2, .4) + 'em; }';
+		case 'width':
+			return '#main { width: ' + (getConfig('auto_scale') ?
+				scale(value, 80, 100, 20) + '%' :
+				scale(value, 1000, 3000, 400) + 'px') + '; }';
+		case 'h_pos':
+			var margin = 100 - scale(getConfig('width'), 80, 100, 20);
+			return '#main { left: ' + scale(value, 0, margin/2, -margin/2) + '%; }';
 		case 'v_margin':
-			return '#main { padding-top: ' + scale(value, 85, 340) + 'px; }';
+			return '#main { margin-top: ' + (getConfig('auto_scale') ?
+				scale(value, 5, 20) + '%' :
+				scale(value, 80, 600) + 'px') + '; }';
 		case 'hide_options':
 			return '#options_button { opacity: 0; }';
 		case 'css':
 			return value;
+		case 'auto_scale':
+			return value ? null : '#main { margin-top: 80px; width: 1000px; }';
 		default:
 			return null;
 	}
@@ -1256,6 +1294,16 @@ function scale(value, mid, max, min) {
 	return value > 1 ?
 		mid + (value - 1) * (max - mid) :
 		min + value * (mid - min);
+}
+
+// gets rgb representation of hex color
+function hexToRgb(hex) {
+	hex = /[a-f\d]{6}/i.exec(hex);
+	var bigint = parseInt(hex, 16);
+	var r = (bigint >> 16) & 255;
+	var g = (bigint >> 8) & 255;
+	var b = bigint & 255;
+	return r + "," + g + "," + b;
 }
 
 // apply config value change
@@ -1276,29 +1324,69 @@ function onChange(key, value) {
 			document.head.appendChild(style);
 
 			// add style rules
-			style.innerText = css;	
+			style.innerText = css;
 		}
 	} else if (styles.hasOwnProperty(key)) {
 		// remove rules
 		styles[key].parentNode.removeChild(styles[key]);
 		delete styles[key];
 	}
+	// refresh dependent values
+	if (key == 'width')
+		onChange('h_pos');
+	else if (key == 'shadow_blur')
+		onChange('shadow_color');
+	else if (key == 'auto_scale') {
+		onChange('width');
+		onChange('v_margin');
+	}
+
+	// update options panel
+	if (!settingsInitialized)
+		return;
 
 	// show/hide default button
+	var input = document.getElementById('options_' + key);
 	var isDefault = value == (theme.hasOwnProperty(key) ? theme[key] : config[key]);
-	document.getElementById('options_' + key).nextSibling
-		.style.visibility = (isDefault ? 'hidden' : null);
+	input.reset.style.visibility = (isDefault ? 'hidden' : null);
+	if (input.swatch)
+		input.swatch.value = value;
+}
+
+// loads config settings
+function loadSettings() {
+	// load theme
+	theme = themes[getConfig('theme')] || {};
+	// load settings
+	for (var key in config)
+		onChange(key);
 }
 
 // apply config values to input controls
 function showConfig(key) {
 	var input = document.getElementById('options_' + key);
+	if (input.type === 'file')
+		return;
+
 	input[input.type === 'checkbox' ? 'checked' : 'value'] = getConfig(key);
 }
 
 // initialize config settings
 function initConfig(key) {
 	var input = document.getElementById('options_' + key);
+	if (input.type == 'color') {
+		input.type = 'text';
+		input.className = 'color';
+		var swatch = document.createElement('input');
+		swatch.type = 'color';
+		swatch.value = input.value;
+		swatch.oninput = function(event) {
+			input.value = this.value;
+			return input.onchange(event);
+		};
+		input.swatch = swatch;
+		input.parentNode.appendChild(swatch);
+	}
 	input.onchange = function(event) {
 		if (input.type == 'file') {
 			// load file
@@ -1320,22 +1408,59 @@ function initConfig(key) {
 			setConfig(key, input.type == 'checkbox' ? Number(input.checked) : input.value);
 	};
 	
-	var button = document.createElement('button');
-	button.innerText = 'Default';
-	button.onclick = function() {
+	var reset = document.createElement('a');
+	reset.href = '#';
+	reset.className = 'revert';
+	reset.title = 'Reset to default';
+	reset.onclick = function() {
 		setConfig(key, null);
 		showConfig(key);
 		return false;
 	};
 	
-	input.parentNode.appendChild(button);
-	onChange(key);
+	input.reset = reset;
+	input.parentNode.appendChild(reset);
 	showConfig(key);
 }
 
-// initialize settings
+var settingsInitialized = false;
+
+// initialize options panel
 function initSettings() {
-	// check if experimental enabled
+	if (settingsInitialized)
+		return;
+
+	settingsInitialized = true;
+
+	// options submenu navigation
+	var options = document.getElementById('options');
+	var nav = document.getElementById('options_nav');
+	var index = 0;
+	for (var i=0; i<nav.children.length; i++) {
+		var a = nav.children[i].firstChild;
+		a.onclick = function(e) {
+			// clear current style
+			nav.children[index].firstChild.classList.remove('current');
+			options.getElementsByTagName('div')[index].classList.remove('current');
+			// apply new current style
+			index = Array.prototype.indexOf.call(nav.children, this.parentNode);
+			nav.children[index].firstChild.classList.add('current');
+			options.getElementsByTagName('div')[index].classList.add('current');
+			// show custom css on advanced tab
+			if (index == nav.children.length-1) {
+				var allcss = document.getElementById('all_css');
+				allcss.value = '';
+				for (var key in config) {
+					var css = (getStyle(key, getConfig(key)));
+					if (css && css.length < 1000 && key != 'css')
+						allcss.value +=  css + '\n';
+				}
+			}
+			return false;
+		};
+	}
+
+	// check if fontSettings enabled
 	if (chrome.fontSettings) {
 		// replace text input with system font list
 		var input = document.getElementById('options_font');
@@ -1344,15 +1469,13 @@ function initSettings() {
 		select.id = input.id;
 	}
 
-	// load theme
-	theme = themes[getConfig('theme')] || {};
-
-	// load settings
+	// show settings
 	for (var key in config)
 		initConfig(key);
+
+	loadSettings();
 	
 	// options menu
-	var options = document.getElementById('options');
 	document.getElementById('options_button').onclick = function() {
 		for (var key in config)
 			showConfig(key);
@@ -1393,22 +1516,25 @@ function initSettings() {
 }
 
 // initialize page
-function init() {
-	initSettings();
-	loadColumns();
+loadSettings();
+loadColumns();
 
-	// refresh recently closed on tab close
-	if (chrome.extension.onMessage)
-		chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
-			if (request == 'tab.closed')
-				refreshClosed();
-		});
+// fix scrollbar jump
+window.onresize = function(event) {
+	document.body.style.width = window.innerWidth + 'px';
+};
+window.onresize();
 
-	// fix scrollbar jump
-	window.onresize = function(event) {
-		document.body.style.width = window.innerWidth + 'px';
-	}
-	window.onresize();
-}
+// load options panel
+window.onhashchange = function(event) {
+	if (location.hash === '#options')
+		initSettings();
+};
+window.onhashchange();
 
-document.addEventListener('DOMContentLoaded', init);
+// refresh recently closed on tab close
+if (chrome.extension.onMessage)
+	chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
+		if (request == 'tab.closed')
+			refreshClosed();
+	});

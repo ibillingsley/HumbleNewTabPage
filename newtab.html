@@ -3,240 +3,89 @@
 <head>
 <meta charset="utf-8" />
 <title>New Tab</title>
-<link rel="shortcut icon" href="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" />
-<style>
-body {
-	background-color: #ffffff;
-	background-attachment: fixed;
-	background-position: left top;
-	margin: 0;
-	overflow-x: hidden;
-	font-family: sans-serif;
-	font-size: 62.5%;
-	line-height: 1;
-	-webkit-user-select: none;
-}
-#main {
-	padding: 85px 10% 0 10%;
-	white-space: nowrap;
-}
-#main ul, .menu {
-	margin: 0;
-	padding: 0;
-	list-style: none;
-}
-#main a + ul, #main a + div {
-	padding-left: 24px;
-}
-#main a {
-	box-sizing: border-box;
-	max-width: 100%;
-	display: inline-block;
-	overflow: hidden;
-	text-overflow: ellipsis;
-	font-size: 1.6em;
-	line-height: 2;
-	text-decoration: none;
-	color: #555555;
-	background-position: 0 50%;
-	background-repeat: no-repeat;
-	background-size: 16px 16px;
-	padding: 0 .8em 0 24px;
-	border: solid transparent;
-	border-width: 0 0 0 .8em;
-	border-radius: .2em;
-	-webkit-transition-property: color, background-color, box-shadow, opacity;
-	-webkit-transition-duration: 0.2s;
-	-webkit-transition-timing-function: ease-out;
-}
-#main a:hover {
-	color: #000000;
-	background-color: #E4F4FF;
-	box-shadow: 0 0 7px #57B0FF;
-}
-.wrap {
-	-webkit-transition-property: height, opacity;
-	-webkit-transition-duration: 0.2s;
-	-webkit-transition-timing-function: ease-out;
-}
-.column {
-	display: inline-block;
-	vertical-align: top;
-	box-sizing: border-box;
-	padding: 10px 0 20px 0;
-	min-height: 300px;
-}
-#main .empty {
-	opacity: 0.5;
-	padding-left: 0;
-}
-.menu {
-	position: absolute;
-	overflow: hidden;
-	white-space: nowrap;
-	font-size: 1.2em;
-	line-height: 1.8;
-	background-color: #fafafa;
-	border: solid 1px #999999;
-	border-radius: 3px;
-	box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5);
-}
-.menu a {
-	display: block;
-	text-decoration: none;
-	color: #000000;
-	padding: 0 2em;
-	border: solid 1px transparent;
-}
-.menu a:hover {
-	background-color: #E4F4FF;
-	border-color: #57B0FF;
-}
-.menu hr {
-	margin: 0;
-	border: solid 1px #cccccc;
-	border-width: 1px 0 0 0;
-}
-.dragstart {
-	opacity: 0.5;
-}
-#options, #options_button {
-	position: absolute;
-	top: 0;
-	right: 0;
-}
-#options {
-	display: none;
-	color: #000000;
-	background-color: #fafafa;
-	border: solid #999999;
-	border-width: 0 0 1px 1px;
-	border-bottom-left-radius: 3px;
-	box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5);
-}
-#options:target {
-	display: block;
-}
-#options div {
-	display: inline-block;
-	vertical-align: top;
-}
-#options div + div {
-	border-left: solid 1px #dddddd;
-}
-#options button {
-	margin: 0 3px;
-}
-#options_button:hover {
-	opacity: 1;
-}
-#options_close_button {
-	color: #000000;
-	text-align: center;
-	text-decoration: none;
-	font-size: 2.0em;
-	position: absolute;
-	top: 0;
-	right: 0;
-	display: block;
-	width: 32px;
-	height: 32px;
-	line-height: 32px;
-}
-h2 {
-	font-size: 1.4em;
-	margin: 8px 14px;
-}
-legend {
-	font-size: 1.4em;
-	color: #888888;
-}
-fieldset {
-	border: solid #dddddd;
-	border-width: 1px 0 0 0;
-	margin: 0;
-	padding: 6px 0 6px 12px;
-}
-label {
-	display: block;
-	font-size: 1.2em;
-	text-align: right;
-	padding-bottom: 3px;
-}
-input, select, textarea {
-	width: 8em;
-	margin: 0 0 0 .5em;
-	box-sizing: border-box;
-	height: 1.6em;
-	vertical-align: top;
-}
-textarea:focus {
-	position: relative;
-	left: 4em;
-	margin-left: -11.5em;
-	width: 20em;
-	height: 10em;
-}
-.folder {
-	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAYFBMVEXR0dG8vLwHBwcMDAwAAAAPDw8AAADExMQAAAClpaUODg4TExOoqKgREREWFhbBwcEAAAAqKioAAAD////////Pz8////8AAABycnL///////8AAAA8PDw7Ozv///8AAABFcLj8AAAAIHRSTlOXjciUMKIggjWWsbaMlah8HbEVFCh1JFigEEIex8gWAFh1g4cAAABOSURBVHjalc9LEoAgDANQFAX8gn8Fbe9/S7aEFWb5pslMBWcphWvNYJENwmdnA/CSHhwAU1WHtMKqF5RehLbbYHQadxi9j5MB/PPvF0wEW/AdAYoPCN0AAAAASUVORK5CYII=);
-}
-.folder.open {
-	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAMFBMVEUODg4jIyP///8AAAAAAAAAAAD///8HBwcAAAD///8AAAAODg4BAQEPDw8AAAADAwMNPiCWAAAAC3RSTlP+41u8vW1c9m97AMNANdEAAAA8SURBVHjarc5JCgAgDANAd61b/v9bBS1Uz80tA4GY+kUVon8hzu4klJlBB7gPhtubkRA6ACsniXaS2vUFQ4YJ5oaTNEEAAAAASUVORK5CYII=);
-}
-.recent {
-	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAABLklEQVQoz2NgIA0Ic+CUEuWTalI4oPRM6bHcVslEDGkJM9XzRs+snm240HTD6pn+M8WtYhJI0pISurftngU883g2L6d1ldcz32eWz7R2iTHDFRhOtX8W8izimfuz5sjSud5AViBQiUoEXIH1vYBnkUDo/qwpsmSuF5AV8czzmcc2qLSisP2zcLiC+qleYHbgM88bUAUzZJ3BQpEgXYt/BrXcDASyQ56F3oEq+M8T9igMrCDomfUzgwn/q0rvhgJNKDoPd8OMYxA3hD/zBzrOZFXQnZBnfs92ToMr+BmTez8IrsTtmQ+QnHj1vw5cwX/mJ/Mr7gQB7Q1/FgoMj8BnM699zUEJyf9C/3sPnO+9kXu/9N6U65dP/E/9z4oR3P9t/pf+n/t/8v+c/+okxC8AEkSjB4OtKa0AAAAASUVORK5CYII=);
-}
-.top {
-	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAABAElEQVQoU2NgIA2IF4vK4pGW5tO+Z9SDR4F5vMUz8/t4FNid8Hxm/0w5HE1YRFbMSsxK3Eq52PZZyDOfZ1aXZMPFgSKiViJ8YAVq+zWfaT/TfWbxzO9ZxLPQZ67PjJ/pAEXUnpkGghW8Wdxw0xWoM/BZ+LNIsJKAZx7P/J6sufDfFqzgP+//qjlXA4GSMBj8LPLJ1QP/vZDc8T9p4nWEEv9nj/b+V0VzasQJkIJwsALPZxGRDOjAGuiDoGepD4OAtMezwDlo0spWTkCnzb36Yf31U6V3vZ95nEdT4N+Tfffaqf9JQAer/p+88YLTQwXUOAFKTUY467/X/+3/JRiIAwCtIIEBY/fpswAAAABJRU5ErkJggg==);
-}
-.apps {
-	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAABKElEQVQoU2NgIB6IyUrPk1kjro1TgXm90TPjZw6tOBVsrXZ55vfkURYWKblniieV15jd8nrm/sxkg9IaxRtyz5CkFbTNnjk9c3jm9Sz0WdAz52f2z1yemSEryAtzBUqFPgt/Fvks4lkYEIYDNSApWOnu+izvQfSTMKACGHR9plUse1IyHKzgv8Txs//n7zkWgKTA/5ndM8tn+nfACmT4fHo0+YprvOHSEc8in9Td9nqWfwOswMZZ65neafNnPs+CwTAS6IaQx//brp363wZW0Bds+8wDaKjvsxunnpxIfBgGNMEF6Mj/qlBH/ld1Bbs+5uEhw3Wq4fdDwb5Q5kPyR/jDIHAIWMc7BDo9C3yW8jD7rq8pkoL/q/8fAUOv/7ZgevX/yXALCAEArcqmRBcRrkIAAAAASUVORK5CYII=);
-}
-.closed {
-	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAACXBIWXMAAAsSAAALEgHS3X78AAAAsUlEQVQ4jd1TMQ7DIAw8V5lYnBf1KV37HNbODH0IP2JhdYfaqeOCGmXsSQhkON8BNokIPIjoCuAGILlwB1BEpCKARGRGmmGXbNHgF9k7IyK/lZj5rut6saCRbMRkPt5aIxXdHHQAKShNsa7rJmoOyiGmIudsou9HBAAieprdGcyhnnnAvcHwYJwDKvC5wmn8awL7iTiPsLj1oWLSIho6KMw8l1KyL6KdA9eqv7qyw1XuC0yMUOYRi2L1AAAAAElFTkSuQmCC);
-}
-.weather {
-	background-image: none;
-}
-.error {
-	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAxlBMVEUfHx8dHR0fHx8bGxscHByampolJSXj4+P///8lJSX///////////+ioqIiIiLMzMz///8pKSkfHx/////09PT///8mJiYcHBwaGhqenp7Z2dlNTU3////////s7Oz///8mJiapqakjIyP////29vbR0dH////u7u4gICAAAAAxMTFPT09WVlZDQ0NRUVEpKSlUVFRtbW0/Pz9QUFA5OTmDg4NNTU0yMjJJSUliYmJEREQ0NDR3d3dOTk5GRkY2NjYhISFYWFjaCwy2AAAAKnRSTlNmZicbJHTA0R1+KgeV8Ujca/4SR7YzRWkD82+eCxTOQKqcGxiy2IHIZgCHgK8mAAAAf0lEQVR42l3I5w6CMBRAYRy4QCVuFBmi0uuqeyCl7fu/lIkm3BvPr5PPgL++UCkZjLEyQlVtpJRmowDge7E91FsItXynT4mF0Dwf9c0GhM71otsOgd7jrrsBAeDPlx9TCNNsCRQW0WqNgCGM1WxOYaLe+ZQCjISbeBRgOOj/5gPn/ye19z/fnAAAAABJRU5ErkJggg==);
-}
-#options_button {
-	background: transparent url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAMAAABhEH5lAAABiVBMVEViYmIoKCgnJycjIyM9PT08PDwjIyNjY2OhoaH////b29uEhIT///+kpKTY2Ng1NTUhISH///+GhoYoKCj///+Dg4P///8sLCydnZ0kJCQzMzP///9wcHBbW1s0NDTIyMioqKinp6d6enr///80NDQoKCgrKysiIiJWVlaDg4P+/v6SkpKAgIAzMzMkJCT///9nZ2e5ubkrKystLS2BgYGVlZX///93d3cmJia7u7v///+ioqL///85OTkxMTEoKCj////39/dnZ2fx8fGUlJQqKipwcHDOzs7w8PCwsLD////////9/f0qKir///////93d3dRUVEmJiaIiIj///////8iIiL///8AAAA0NDQzMzNERERDQ0NbW1tMTExLS0t3d3dvb29JSUlYWFhZWVlycnJ4eHhTU1N6enpeXl5tbW1paWlGRkZcXFxQUFBSUlJaWlo/Pz9NTU1fX18zMzNVVVViYmJhYWFgYGBWVlZUVFRkZGRlZWU5OTlXV1djY2NnZ2dmZmZoaGiPuPURAAAAWXRSTlPUsrkYoJse0qY+zPY8o830FX33D5P5W6PsbPNOsvLXzj/m/BQVkDYVRfaj0vf9aWZF3SSg/PEf/B7cgbhx6BKHBJE5LfEwl8lrNjo4pxsQIRY8GPICayomABxyED4AAAEGSURBVHjaXZDlb8NADMVvzOuYodMYNN40ho6Zm4vGlHFRbTh39l++5NJJ1fzBev7Jsp8eoX4V5ubkZeQfyr++KchC4eYqSm5jRbX9o2Efzcl2SyDCWMSWbflcoPHES0pPAmjPTiwREkgaAQD0ioMy699qN5G/T8xPA1pvKx7q7Yia/HV9/2BB4eAsr1LSF49q3Bxec7cXGaaN+BYJOiZHrc0ztP2BaDp7pLuzy0L1aZLSo+8kwubOMaFSqwKWbjdO2YaFX7sn3sceVzLn7l5PI/ycChMDBiACY27nqTOBNgYfm+q5Oz/MfF5IAl0uDTVUlwHU1I0dXmWFU6yqFf/yKqksLc/IX5ENcDIUyKR/AAAAAElFTkSuQmCC) no-repeat center center;
-	width: 32px;
-	height: 32px;
-	opacity: 0.5;
-}
-</style>
-<script src="newtab.js"></script>
+<link rel="shortcut icon" href="blank.gif" />
+<link rel="stylesheet" href="newtab.css">
 </head>
 <body>
 <div id="main">
 </div>
 <a id="options_button" href="#options"></a>
 <div id="options">
-	<h2>Options</h2>
 	<a id="options_close_button" href="#">&times;</a>
-	<div>
+	<ul id="options_nav">
+		<li><a href="#options/settings" class="current">Settings</a></li>
+		<li><a href="#options/appearance">Appearance</a></li>
+		<li><a href="#options/advanced">Advanced</a></li>
+	</ul>
+	<div class="current">
+	<fieldset>
+		<legend>Settings</legend>
+		<label><span>Open links in</span><select id="options_newtab">
+			<option value="0">Current tab</option>
+			<option value="1">New tab</option>
+			<option value="2">New tab (background)</option>
+		</select></label>
+		<label><span>Lock columns</span><input id="options_lock" type="checkbox"/></label>
+		<label><span>Auto-close folders</span><input id="options_auto_close" type="checkbox"/></label>
+		<label><span>Show top-level folders</span><input id="options_show_root" type="checkbox"/></label>
+		<label><span>Hide options button</span><input id="options_hide_options" type="checkbox"/></label>
+	</fieldset>
+	<fieldset>
+		<legend>Content</legend>
+		<label><span>Bookmarks bar</span><input id="options_show_1" type="checkbox"/></label>
+		<label><span>Other bookmarks</span><input id="options_show_2" type="checkbox"/></label>
+		<label><span>Most visited</span><input id="options_show_top" type="checkbox"/></label>
+		<label><span>Apps</span><input id="options_show_apps" type="checkbox"/></label>
+		<label><span>Recent bookmarks</span><input id="options_show_recent" type="checkbox"/></label>
+		<label><span>Weather</span><input id="options_show_weather" type="checkbox"/></label>
+		<label><span>Recently closed</span><input id="options_show_closed" type="checkbox"/></label>
+	</fieldset>
+	<fieldset>
+		<legend>Weather</legend>
+		<label><span>Location</span><input id="options_weather_location" type="text"/></label>
+		<label><span>°C or °F</span><select id="options_weather_units">
+			<option value="c">Celsius</option>
+			<option value="f">Fahrenheit</option>
+		</select></label>
+	</fieldset>
+	</div><div>
 	<fieldset>
 		<legend>Font</legend>
-		<label>Font<input id="options_font" type="text"/></label>
-		<label>Size<input id="options_font_size" type="number" min="6" max="100"/></label>
+		<label><span>Font</span><input id="options_font" type="text"/></label>
+		<label><span>Size</span><input id="options_font_size" type="number" min="6" max="100"/></label>
 	</fieldset>
 	<fieldset>
 		<legend>Colors</legend>
-		<label>Theme<select id="options_theme"></select></label>
-		<label>Font color<input id="options_font_color" type="color"/></label>
-		<label>Background color<input id="options_background_color" type="color"/></label>
-		<label>Highlight color<input id="options_highlight_color" type="color"/></label>
-		<label>Highlight font color<input id="options_highlight_font_color" type="color"/></label>
-		<label>Shadow color<input id="options_shadow_color" type="color"/></label>
+		<label><span>Theme</span><select id="options_theme"></select></label>
+		<label><span>Text</span><input id="options_font_color" type="color"/></label>
+		<label><span>Background</span><input id="options_background_color" type="color"/></label>
+		<label><span>Highlight</span><input id="options_highlight_color" type="color"/></label>
+		<label><span>Highlight text</span><input id="options_highlight_font_color" type="color"/></label>
+		<label><span>Shadow</span><input id="options_shadow_color" type="color"/></label>
 	</fieldset>
 	<fieldset>
-		<legend>Background</legend>
-		<label>Image<input id="options_background_image_file" type="file" accept="image/*"/></label>
-		<label>Image URL<input id="options_background_image" type="url"/></label>
-		<label>Image align<select id="options_background_align">
+		<legend>Layout</legend>
+		<label><span>Item spacing</span><input id="options_spacing" type="range" min="0" max="2" step="0.001"/></label>
+		<label><span>Top margin</span><input id="options_v_margin" type="range" min="0" max="2" step="0.001"/></label>
+		<label><span>Column width</span><input id="options_width" type="range" min="0" max="2" step="0.001"/></label>
+		<label><span>Align</span><input id="options_h_pos" type="range" min="0" max="2" step="0.001"/></label>
+		<label><span>Scale with window size</span><input id="options_auto_scale" type="checkbox"/></label>
+	</fieldset>
+	<fieldset>
+		<legend>Highlight</legend>
+		<label><span>Shadow size</span><input id="options_shadow_blur" type="range" min="0" max="2" step="0.001"/></label>
+		<label><span>Corner roundness</span><input id="options_highlight_round" type="range" min="0" max="2" step="0.001"/></label>
+	</fieldset>
+	<fieldset>
+		<legend>Animation</legend>
+		<label><span>Highlight fade time</span><input id="options_fade" type="range" min="0" max="2" step="0.001"/></label>
+		<label><span>Folder open time</span><input id="options_slide" type="range" min="0" max="2" step="0.001"/></label>
+	</fieldset>
+	<fieldset>
+		<legend>Background image</legend>
+		<label><span>URL</span><input id="options_background_image" type="url" placeholder="http://"/></label>
+		<label><span>Local file</span><input id="options_background_image_file" type="file" accept="image/*"/></label>
+		<label><span>Align</span><select id="options_background_align">
 			<option value="left top">Top left</option>
 			<option value="top">Top</option>
 			<option value="right top">Top right</option>
@@ -247,59 +96,24 @@ textarea:focus {
 			<option value="bottom">Bottom</option>
 			<option value="right bottom">Bottom right</option>
 		</select></label>
-		<label>Image tiling<select id="options_background_repeat">
+		<label><span>Tiling</span><select id="options_background_repeat">
 			<option value="repeat">Tile</option>
 			<option value="repeat-x">Horizontal</option>
 			<option value="repeat-y">Vertical</option>
 			<option value="no-repeat">None</option>
 		</select></label>
 	</fieldset>
-	<fieldset>
-		<legend>Layout</legend>
-		<label>Item spacing<input id="options_spacing" type="range" min="0" max="2" step="0.001"/></label>
-		<label>Horizontal margin<input id="options_h_margin" type="range" min="0" max="2" step="0.001"/></label>
-		<label>Vertical margin<input id="options_v_margin" type="range" min="0" max="2" step="0.001"/></label>
-	</fieldset>
-	<fieldset>
-		<legend>Advanced</legend>
-		<label>Custom CSS<textarea id="options_css"></textarea></label>
-	</fieldset>
 	</div><div>
 	<fieldset>
-		<legend>Highlight</legend>
-		<label>Shadow size<input id="options_shadow_blur" type="range" min="0" max="2" step="0.001"/></label>
-		<label>Corner roundness<input id="options_highlight_round" type="range" min="0" max="2" step="0.001"/></label>
+		<legend>Generated CSS</legend>
+		<label><textarea id="all_css" disabled></textarea></label>
 	</fieldset>
 	<fieldset>
-		<legend>Animation</legend>
-		<label>Highlight fade time<input id="options_fade" type="range" min="0" max="2" step="0.001"/></label>
-		<label>Folder open time<input id="options_slide" type="range" min="0" max="2" step="0.001"/></label>
-	</fieldset>
-	<fieldset>
-		<legend>Weather</legend>
-		<label>Location<input id="options_weather_location" type="text"/></label>
-		<label>°C or °F<select id="options_weather_units">
-			<option value="c">Celsius</option>
-			<option value="f">Fahrenheit</option>
-		</select></label>
-	</fieldset>
-	<fieldset>
-		<legend>Content</legend>
-		<label>Show Bookmarks bar<input id="options_show_1" type="checkbox"/></label>
-		<label>Show Other bookmarks<input id="options_show_2" type="checkbox"/></label>
-		<label>Show Most visited<input id="options_show_top" type="checkbox"/></label>
-		<label>Show Apps<input id="options_show_apps" type="checkbox"/></label>
-		<label>Show Recent bookmarks<input id="options_show_recent" type="checkbox"/></label>
-		<label>Show Weather<input id="options_show_weather" type="checkbox"/></label>
-		<label>Show Recently closed<input id="options_show_closed" type="checkbox"/></label>
-	</fieldset>
-	<fieldset>
-		<legend>Settings</legend>
-		<label>Open links in new tab<input id="options_newtab" type="checkbox"/></label>
-		<label>Hide options button<input id="options_hide_options" type="checkbox"/></label>
-		<label>Lock columns<input id="options_lock" type="checkbox"/></label>
+		<legend>Custom CSS</legend>
+		<label><textarea id="options_css"></textarea></label>
 	</fieldset>
 	</div>
 </div>
+<script src="newtab.js"></script>
 </body>
 </html>

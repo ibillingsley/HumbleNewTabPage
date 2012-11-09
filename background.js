@@ -1,3 +1,5 @@
+'use strict';
+
 var tabs = {};
 var size = 10;
 var index = Number(localStorage.getItem('closed.index')) || 0;
@@ -64,17 +66,19 @@ chrome.tabs.onRemoved.addListener(function(tabId, removeInfo) {
 	var title = tabs[tabId].title;
 
 	// check for duplicates
-	for (var i = (index - 1 + size) % size ; ; i = (i - 1 + size) % size) {
+	var i = (index - 1 + size) % size;
+	while (true) {
 
-		storedurl = localStorage.getItem('closed.' + i + '.url');
+		var storedurl = localStorage.getItem('closed.' + i + '.url');
 		if (!storedurl)
 			break;
 
 		if (url == storedurl) {
 			// update indexes
-			for (var j = (index - 1 + size) % size ; ; j = (j - 1 + size) % size) {
-				nexturl = localStorage.getItem('closed.' + j + '.url');
-				nexttitle = localStorage.getItem('closed.' + j + '.title');
+			var j = (index - 1 + size) % size;
+			while (true) {
+				var nexturl = localStorage.getItem('closed.' + j + '.url');
+				var nexttitle = localStorage.getItem('closed.' + j + '.title');
 
 				localStorage.setItem('closed.' + j + '.url', url);
 				localStorage.setItem('closed.' + j + '.title', title);
@@ -84,6 +88,8 @@ chrome.tabs.onRemoved.addListener(function(tabId, removeInfo) {
 
 				if (j == i)
 					break;
+
+				j = (j - 1 + size) % size;
 			}
 
 			delete tabs[tabId];
@@ -93,6 +99,8 @@ chrome.tabs.onRemoved.addListener(function(tabId, removeInfo) {
 
 		if (i == index)
 			break;
+
+		i = (i - 1 + size) % size
 	}
 
 	// store new entry
