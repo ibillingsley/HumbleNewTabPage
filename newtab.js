@@ -57,10 +57,10 @@ function renderAll(nodes, target, toplevel) {
 	for (var i = 0; i < nodes.length; i++) {
 		var node = nodes[i];
 		// skip extensions and duplicated child folders
-		if (toplevel || (node.isApp != false && !coords[node.id]))
+		if (toplevel || (node.isApp !== false && !coords[node.id]))
 			render(node, ul);
 	}
-	if (ul.childNodes.length == 0)
+	if (ul.childNodes.length === 0)
 		render({ id: 'empty', title: '< Empty >' }, ul);
 	if (toplevel)
 		target.appendChild(ul);
@@ -469,7 +469,7 @@ function getDropTarget(event) {
 	var target = event.target;
 	if (target && (target.tagName == 'A' || target.parentNode.tagName == 'A') && dragIds.length == 1) {
 		// get parent folder until toplevel
-		while (target && 
+		while (target &&
 			target.parentNode.parentNode &&
 			target.parentNode.parentNode.className != 'column') {
 			// target should be LI
@@ -541,6 +541,7 @@ function getChildrenFunction(node) {
 		case 'apps':
 			return function(callback) {
 				chrome.management.getAll(function(result) {
+					result.push({ id: 'webstore', name: 'Chrome Web Store', appLaunchUrl: 'https://chrome.google.com/webstore' });
 					callback(result);
 				});
 			};
@@ -646,10 +647,10 @@ function getIcon(node) {
 	if (node.icons) {
 		var size;
 		for (var i in node.icons) {
-			var icon = node.icons[i];
-			if (icon.url && (!size || (icon.size < size && icon.size > 15))) {
-				url = icon.url;
-				size = icon.size;
+			var iconInfo = node.icons[i];
+			if (iconInfo.url && (!size || (iconInfo.size < size && iconInfo.size > 15))) {
+				url = iconInfo.url;
+				size = iconInfo.size;
 			}
 		}
 	} else if (node.icon)
@@ -738,7 +739,7 @@ function animate(node, a, isopen) {
 		else {
 			wrap.className = null;
 			wrap.removeAttribute('style');
-		}	
+		}
 		a.toggleAction = null;
 	};
 	var duration = scale(getConfig('slide'), .2, 1) * 1000;
@@ -771,13 +772,13 @@ function verifyColumns() {
 			if (i > -1)
 				missing.splice(i, 1);
 		}
-		if (columns[x].length == 0) {
+		if (columns[x].length === 0) {
 			columns.splice(x, 1);
 			x--;
 		}
 	}
 
-	if (columns.length == 0)
+	if (columns.length === 0)
 		columns.push([]);
 	// add missing root items
 	var column = columns[0];
@@ -835,7 +836,7 @@ function saveColumns() {
 			else
 				break;
 		}
-		if (y == 0)
+		if (y === 0)
 			break;
 	}
 	verifyColumns();
@@ -889,7 +890,7 @@ function addRow(id, xpos, ypos) {
 			if (x == xpos && ypos > i)
 				ypos--;
 		}
-		if (columns[x].length == 0) {
+		if (columns[x].length === 0) {
 			columns.splice(x, 1);
 			x--;
 			if (xpos > x)
@@ -939,7 +940,7 @@ function refreshClosed() {
 			targets.push(a.parentNode);
 		}
 	}
-	if (folders.length == 0) {
+	if (folders.length === 0) {
 		var target = document.getElementsByClassName('column')[coords['closed'].x];
 		target.removeChild(target.firstChild);
 		targets.push(target);
@@ -994,7 +995,7 @@ function getWeather(callback) {
 			return;
 		}
 
-		var response = response.query.results.channel;
+		response = response.query.results.channel;
 		var current = response.item.condition;
 		var location = response.location;
 		if (!current || !location) {
@@ -1023,7 +1024,7 @@ function getWeather(callback) {
 		for (var i = 0; i < forecast.length; i++) {
 			nodes.push({
 				title: forecast[i].day + ' ' +
-					forecast[i].high + '° | ' + 
+					forecast[i].high + '° | ' +
 					forecast[i].low + '° ' +
 					forecast[i].text,
 				icon: 'http://l.yimg.com/a/i/us/we/52/' + forecast[i].code + '.gif'
@@ -1402,7 +1403,7 @@ function initConfig(key) {
 					if (f.target.result)
 						setConfig(key, f.target.result);
 				};
-				reader.readAsDataURL(file);	
+				reader.readAsDataURL(file);
 			}
 		} else
 			setConfig(key, input.type == 'checkbox' ? Number(input.checked) : input.value);
@@ -1485,7 +1486,7 @@ function initSettings() {
 
 	// load themes
 	var select = document.getElementById('options_theme');
-	if (select.childNodes.length == 0) {
+	if (select.childNodes.length === 0) {
 		for (var i in themes) {
 			var option = document.createElement('option');
 			option.innerText = i;

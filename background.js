@@ -100,7 +100,7 @@ chrome.tabs.onRemoved.addListener(function(tabId, removeInfo) {
 		if (i == index)
 			break;
 
-		i = (i - 1 + size) % size
+		i = (i - 1 + size) % size;
 	}
 
 	// store new entry
