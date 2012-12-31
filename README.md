@@ -29,6 +29,12 @@ This project is licensed under the **MIT License**, see ``LICENSE_MIT.txt`` for 
 Changelog
 ---------
 
+Version 1.9 - December 30, 2012
+
+- uses geolocation for weather by default
+- fixed bug with drag and drop
+- added Chrome Web Store to apps
+
 Version 1.8 - November 9, 2012
 
 - redesigned options panel
