@@ -415,7 +415,7 @@ function enableDragDrop() {
 			dropTarget = target;
 			var bordercss = 'solid 2px ' + getConfig('font_color');
 			if (target.tagName == 'LI' || target.tagName == 'UL') {
-				if (event.pageY - target.offsetTop > target.clientHeight / 2) {
+				if (isAbove(event.pageY, target)) {
 					target.style.borderBottom = bordercss;
 					target.style.margin = '0 0 -2px 0';
 				} else {
@@ -505,16 +505,21 @@ function getDropY(target, event) {
 	var y = null;
 	if (target.tagName == 'LI') {
 		y = 0;
-		if (event.pageY - target.offsetTop > target.clientHeight / 2)
+		if (isAbove(event.pageY, target))
 			y++;
 		for (; target.previousSibling; y++)
 			target = target.previousSibling;
 	} else if (target.tagName == 'UL') {
 		y = 0;
-		if (event.pageY - target.offsetTop > target.clientHeight / 2)
+		if (isAbove(event.pageY, target))
 			y++;
 	}
 	return y;
+}
+
+// returns true if y position is above target element midpoint
+function isAbove(pageY, target) {
+	return pageY - window.scrollY - target.getBoundingClientRect().top > target.clientHeight / 2;
 }
 
 // clears droptarget styles
@@ -958,7 +963,7 @@ function getWeather(callback) {
 	var loc = getConfig('weather_location');
 	if (!geopos && !loc) {
 		// no location
-		callback([{ id: 'weather', title: 'Select weather location', url: '#options', icon: 'http://l.yimg.com/a/i/us/we/52/3200.gif' }]);
+		callback([{ id: 'weather', title: 'Location unknown', children: true, icon: 'http://l.yimg.com/a/i/us/we/52/3200.gif' }]);
 		// try geolocation
 		if (navigator.geolocation) {
 			navigator.geolocation.getCurrentPosition(function(pos) {
@@ -987,6 +992,7 @@ function getWeather(callback) {
 
 	// show loading...
 	callback([{ id: 'weather', title: 'Loading weather...', children: true }]);
+	geopos = null;
 
 	var onerror = function(event) {
 		console.log(event);
@@ -1025,9 +1031,8 @@ function getWeather(callback) {
 		// correct location value
 		var city = location.city + (location.region ? ', ' + location.region : '') + ', ' + location.country;
 		if (city != getConfig('weather_location')) {
-			var input = document.getElementById('options_weather_location');
-			input.value = city;
-			input.onchange();
+			setConfig('weather_location', city);
+			showConfig('weather_location');
 			return;
 		}
 
