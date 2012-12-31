@@ -30,7 +30,7 @@ function render(node, target) {
 		a.style.pointerEvents = 'none';
 
 	li.appendChild(a);
-	
+
 	// folder
 	if (node.children) {
 		// render children
@@ -41,7 +41,7 @@ function render(node, target) {
 				renderAll(result, li);
 			});
 		}
-		
+
 		// click handlers
 		addHandlers(node, a);
 		enableDragFolder(node, a);
@@ -379,7 +379,7 @@ var dropTarget;
 function enableDragFolder(node, a) {
 	if (getConfig('lock'))
 		return;
-	
+
 	a.draggable = true;
 	a.ondragstart = function(event) {
 		dragIds = [node.id];
@@ -404,7 +404,7 @@ function enableDragDrop() {
 		main.ondrop = null;
 		return;
 	}
-	
+
 	main.ondragover = function(event) {
 		event.preventDefault();
 		event.dataTransfer.dropEffect = 'move';
@@ -457,7 +457,7 @@ function enableDragDrop() {
 				x++;
 			addColumn(dragIds, x);
 		}
-		
+
 		return false;
 	};
 }
@@ -952,10 +952,29 @@ function refreshClosed() {
 	});
 }
 
+var geopos;
 // gets weather info from yahoo weather api using YQL
 function getWeather(callback) {
+	var loc = getConfig('weather_location');
+	if (!geopos && !loc) {
+		// no location
+		callback([{ id: 'weather', title: 'Select weather location', url: '#options', icon: 'http://l.yimg.com/a/i/us/we/52/3200.gif' }]);
+		// try geolocation
+		if (navigator.geolocation) {
+			navigator.geolocation.getCurrentPosition(function(pos) {
+				geopos = pos.coords;
+				refreshWeather();
+			});
+		}
+		return;
+	}
+
 	var query = 'select * from weather.forecast where u="' + getConfig('weather_units') +
-		'" and woeid in (select woeid from geo.placefinder where text="' + getConfig('weather_location') + '" and focus="" limit 1) limit 1';
+		'" and woeid in (select woeid from geo.placefinder where text="' +
+		( geopos ?
+			geopos.latitude + ' ' + geopos.longitude + '" and gflags="R" ' :
+			getConfig('weather_location') + '" '
+		) + 'and focus="" limit 1) limit 1';
 
 	var url = 'http://query.yahooapis.com/v1/public/yql?format=json&q=' + encodeURIComponent(query);
 
@@ -1082,7 +1101,7 @@ var config = {
 	slide: 1,
 	hide_options: 0,
 	lock: 0,
-	weather_location: 'Toronto, ON, Canada',
+	weather_location: '',
 	weather_units: 'c',
 	show_1: 1,
 	show_2: 1,
@@ -1408,7 +1427,7 @@ function initConfig(key) {
 		} else
 			setConfig(key, input.type == 'checkbox' ? Number(input.checked) : input.value);
 	};
-	
+
 	var reset = document.createElement('a');
 	reset.href = '#';
 	reset.className = 'revert';
@@ -1418,7 +1437,7 @@ function initConfig(key) {
 		showConfig(key);
 		return false;
 	};
-	
+
 	input.reset = reset;
 	input.parentNode.appendChild(reset);
 	showConfig(key);
@@ -1475,12 +1494,12 @@ function initSettings() {
 		initConfig(key);
 
 	loadSettings();
-	
+
 	// options menu
 	document.getElementById('options_button').onclick = function() {
 		for (var key in config)
 			showConfig(key);
-		
+
 		return true;
 	};
 
