@@ -551,7 +551,15 @@ function getChildrenFunction(node) {
 						if (result[i].enabled)
 							enabledApps.push(result[i]);
 					}
-					enabledApps.push({ id: 'webstore', name: 'Chrome Web Store', appLaunchUrl: 'https://chrome.google.com/webstore' });
+					enabledApps.sort(function (a, b) {
+						if (a.name < b.name)
+							return -1;
+						else if (a.name == b.name)
+							return 0;
+						else
+							return 1;
+					});
+					enabledApps.unshift({ id: 'webstore', name: 'Chrome Web Store', appLaunchUrl: 'https://chrome.google.com/webstore' });
 					callback(enabledApps);
 				});
 			};
