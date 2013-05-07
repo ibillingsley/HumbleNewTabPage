@@ -546,8 +546,13 @@ function getChildrenFunction(node) {
 		case 'apps':
 			return function(callback) {
 				chrome.management.getAll(function(result) {
-					result.push({ id: 'webstore', name: 'Chrome Web Store', appLaunchUrl: 'https://chrome.google.com/webstore' });
-					callback(result);
+					var enabledApps = [];
+					for (var i = 0, len = result.length; i < len; ++i) {
+						if (result[i].enabled)
+							enabledApps.push(result[i]);
+					}
+					enabledApps.push({ id: 'webstore', name: 'Chrome Web Store', appLaunchUrl: 'https://chrome.google.com/webstore' });
+					callback(enabledApps);
 				});
 			};
 		case 'recent':
