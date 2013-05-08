@@ -554,10 +554,10 @@ function getChildrenFunction(node) {
 					enabledApps.sort(function (a, b) {
 						if (a.name < b.name)
 							return -1;
-						else if (a.name == b.name)
-							return 0;
-						else
+						else if (a.name > b.name)
 							return 1;
+						else
+							return 0;
 					});
 					enabledApps.unshift({ id: 'webstore', name: 'Chrome Web Store', appLaunchUrl: 'https://chrome.google.com/webstore' });
 					callback(enabledApps);
