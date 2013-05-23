@@ -45,6 +45,47 @@ function render(node, target) {
 		// click handlers
 		addHandlers(node, a);
 		enableDragFolder(node, a);
+
+	} else if (node.appLaunchUrl) {
+		a.oncontextmenu = function () {
+			var menuItems = [];
+
+			if (node.optionsUrl) {
+				menuItems.push({
+					label: 'Options',
+					action: function () {
+						window.location = node.optionsUrl;
+					}
+				});
+			}
+
+			if (node.homepageUrl) {
+				menuItems.push({
+					label: 'Open in WebStore',
+					action: function () {
+						window.location = node.homepageUrl;
+					}
+				});
+			}
+
+			if (node.mayDisable) {
+				menuItems.push({
+					label: 'Uninstall',
+					action: function () {
+						if (confirm('Sure to uninstall the app\n' +
+								a.innerText))
+							chrome.management
+								.uninstall(node.id, chrome.tabs.reload);
+					}
+				});
+			}
+
+			if (menuItems.length) {
+				renderMenu(menuItems, event.pageX, event.pageY);
+				return false;
+			}
+		};
+
 	}
 
 	target.appendChild(li);
