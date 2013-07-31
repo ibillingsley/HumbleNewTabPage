@@ -117,7 +117,7 @@ function renderAll(nodes, target, toplevel) {
 // render column with given index
 function renderColumn(index, target) {
 	var ids = columns[index];
-	if (ids.length == 1 && ids[0] != 'weather' && !getConfig('show_root'))
+	if (ids.length == 1 && !getConfig('show_root'))
 		getChildrenFunction({id: ids[0]})(function(result) {
 			renderAll(result, target);
 			addColumnHandlers(index, target);
@@ -294,20 +294,12 @@ function addColumnHandlers(index, ul) {
 // gets context menu items for given node
 function getMenuItems(node) {
 	var items = [];
-	if (node.id == 'weather')
-		items.push({
-			label: 'Update weather',
-			action: function() {
-				refreshWeather();
-			}
-		});
-	else
-		items.push({
-			label: 'Open all links in folder',
-			action: function() {
-				openLinks(node);
-			}
-		});
+	items.push({
+		label: 'Open all links in folder',
+		action: function() {
+			openLinks(node);
+		}
+	});
 	if (node.id == 'closed')
 		items.push({
 			label: 'Clear recently closed',
@@ -616,17 +608,6 @@ function getChildrenFunction(node) {
 					callback(result);
 				});
 			};
-		case 'weather':
-			if (node.children)
-				return function(callback) {
-					callback(node.children);
-				};
-			else
-				return function(callback) {
-					getWeather(function(result) {
-						callback(result[0].children);
-					});
-				};
 		default:
 			if  (node.children)
 				return function(callback) {
@@ -662,11 +643,6 @@ function getSubTree(id, callback) {
 		case 'closed':
 			callback([{ title: 'Recently closed', id: 'closed', children: true }]);
 			break;
-		case 'weather':
-			getWeather(function(result) {
-				callback(result);
-			});
-			break;
 		default:
 			chrome.bookmarks.getSubTree(id, function(result) {
 				if (result)
@@ -694,7 +670,6 @@ function setClass(target, node, isopen) {
 		case 'apps':
 		case 'recent':
 		case 'closed':
-		case 'weather':
 		case 'empty':
 			target.classList.add(node.id);
 	}
@@ -870,7 +845,7 @@ function loadColumns() {
 		chrome.bookmarks.getTree(function(result) {
 			// init root nodes
 			var nodes = result[0].children;
-			var special = ['top', 'apps', 'recent', 'weather', 'closed'];
+			var special = ['top', 'apps', 'recent', 'closed'];
 			root = [];
 			for (var i = 0; i < nodes.length; i++)
 				if (getConfig('show_' + nodes[i].id) != false)
@@ -1011,131 +986,6 @@ function refreshClosed() {
 	});
 }
 
-var geopos;
-// gets weather info from yahoo weather api using YQL
-function getWeather(callback) {
-	var loc = getConfig('weather_location');
-	if (!geopos && !loc) {
-		// no location
-		callback([{ id: 'weather', title: 'Location unknown', children: true, icon: 'http://l.yimg.com/a/i/us/we/52/3200.gif' }]);
-		// try geolocation
-		if (navigator.geolocation) {
-			navigator.geolocation.getCurrentPosition(function(pos) {
-				geopos = pos.coords;
-				refreshWeather();
-			});
-		}
-		return;
-	}
-
-	var query = 'select * from weather.forecast where u="' + getConfig('weather_units') +
-		'" and woeid in (select woeid from geo.placefinder where text="' +
-		( geopos ?
-			geopos.latitude + ' ' + geopos.longitude + '" and gflags="R" ' :
-			getConfig('weather_location') + '" '
-		) + 'and focus="" limit 1) limit 1';
-
-	var url = 'http://query.yahooapis.com/v1/public/yql?format=json&q=' + encodeURIComponent(query);
-
-	// check cache
-	var bg = chrome.extension.getBackgroundPage();
-	if (bg && bg.weatherUrl == url) {
-		callback(bg.weather);
-		return;
-	}
-
-	// show loading...
-	callback([{ id: 'weather', title: 'Loading weather...', children: true }]);
-	geopos = null;
-
-	var onerror = function(event) {
-		console.log(event);
-		var targets = document.getElementsByClassName('weather');
-		for (var i = 0; i < targets.length; i++){
-			targets[i].childNodes[1].nodeValue = 'Error loading weather';
-			targets[i].classList.add('error');
-		}
-	};
-
-	// request weather data
-	var request = new XMLHttpRequest();
-
-	request.onload = function(event) {
-		var nodes = [];
-		var response = request.response;
-		if (!response) {
-			onerror();
-			return;
-		}
-		response = JSON.parse(response);
-		// validate
-		if (!response || !response.query || !response.query.results) {
-			onerror(response);
-			return;
-		}
-
-		response = response.query.results.channel;
-		var current = response.item.condition;
-		var location = response.location;
-		if (!current || !location) {
-			onerror(response);
-			return;
-		}
-
-		// correct location value
-		var city = location.city + (location.region ? ', ' + location.region : '') + ', ' + location.country;
-		if (city != getConfig('weather_location')) {
-			setConfig('weather_location', city);
-			showConfig('weather_location');
-			return;
-		}
-
-		// current conditions
-		var parentnode = {
-			id: 'weather',
-			title: current.temp + '°' + (getConfig('weather_units') == 'c' ? 'C' : 'F') + ' ' + current.text,
-			icon: 'http://l.yimg.com/a/i/us/we/52/' + current.code + '.gif'
-		};
-
-		// forecast
-		var forecast = response.item.forecast;
-		for (var i = 0; i < forecast.length; i++) {
-			nodes.push({
-				title: forecast[i].day + ' ' +
-					forecast[i].high + '° | ' +
-					forecast[i].low + '° ' +
-					forecast[i].text,
-				icon: 'http://l.yimg.com/a/i/us/we/52/' + forecast[i].code + '.gif'
-			});
-		}
-		parentnode.children = nodes;
-		refreshWeather([parentnode], url);
-	};
-
-	request.onabort = onerror;
-	request.onerror = onerror;
-	request.ontimeout = onerror;
-
-	request.open('GET', url, true);
-	request.send();
-}
-
-// refreshes weather items
-function refreshWeather(data, url) {
-	// clear cache
-	var bg = chrome.extension.getBackgroundPage();
-	if (bg) bg.cacheWeather(data, url);
-	// render
-	var targets = document.getElementsByClassName('weather');
-	for (var i = 0; i < targets.length; i++) {
-		var target = targets[i].parentNode;
-		getSubTree('weather', function(result) {
-			var li = render(result[0], target.parentNode, 'weather');
-			target.parentNode.replaceChild(li, target);
-		});
-	}
-}
-
 // options : default values
 var config = {
 	font: 'Sans-serif',
@@ -1160,14 +1010,11 @@ var config = {
 	slide: 1,
 	hide_options: 0,
 	lock: 0,
-	weather_location: '',
-	weather_units: 'c',
 	show_1: 1,
 	show_2: 1,
 	show_top: 1,
 	show_apps: 1,
 	show_recent: 1,
-	show_weather: 1,
 	show_closed: 1,
 	show_root: 0,
 	newtab: 0,
@@ -1287,8 +1134,6 @@ function setConfig(key, value) {
 				showConfig(i);
 			}
 		}
-	} else if (key.substring(0, 7) == 'weather') {
-		refreshWeather();
 	} else if (key.substring(0,4) == 'show') {
 		var id = key.substring(5);
 		var i = root.indexOf(id);
