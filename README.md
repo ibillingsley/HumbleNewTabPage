@@ -29,60 +29,70 @@ This project is licensed under the **MIT License**, see ``LICENSE_MIT.txt`` for 
 Changelog
 ---------
 
+Version 1.10 - August 3, 2013
+
+- Fixed launching packaged apps (Google Keep)
+- Fixed launching file:/// and chrome:// URLs
+- Fixed Mobile Bookmarks folder not being removable
+- Disable weather if geolocation is denied
+- Default layout changed to 2 columns
+- Uninstall apps from the context menu
+- Hide Google Wallet Service from apps
+
 Version 1.9 - December 30, 2012
 
-- uses geolocation for weather by default
-- fixed bug with drag and drop
-- added Chrome Web Store to apps
+- Uses geolocation for weather by default
+- Fixed bug with drag and drop
+- Added Chrome Web Store to apps
 
 Version 1.8 - November 9, 2012
 
-- redesigned options panel
-- added several new settings
-- performance tweaks
-- source code released under the MIT license
+- Redesigned options panel
+- Added several new settings
+- Performance tweaks
+- Source code released under the MIT license
 
 Version 1.7 - September 8, 2012
 
-- added custom CSS field for advanced users
-- added option to hide Bookmarks bar and Other bookmarks
+- Added custom CSS field for advanced users
+- Added option to hide Bookmarks bar and Other bookmarks
 
 Version 1.6 - August 30, 2012
 
-- added option to open links in new tabs
-- support local file for background image
-- weather errors fixed
+- Added option to open links in new tabs
+- Support local file for background image
+- Weather errors fixed
 
 Version 1.5 - August 29, 2012
 
-- weather forecast now uses Yahoo (Google discontinued their weather service without warning)
-- system font list enabled on supported versions
+- Weather forecast now uses Yahoo (Google discontinued their weather service without warning)
+- System font list enabled on supported versions
 
 Version 1.4 - August 10, 2012
 
-- added option to disable the weather and other special folders
-- minor bug fixes
+- Added option to disable the weather and other special folders
+- Minor bug fixes
 
 Version 1.3 - August 9, 2012
 
-- fixed error on old Chrome versions
+- Fixed error on old Chrome versions
 
 Version 1.2 - August 8, 2012
 
-- added apps, most visited, recently closed, and weather
-- more flexible layout with unlimited columns
-- open all links in folder from context menu
-- color themes and new default style
-- added smooth animation and highlight shadow
-- drag and drop to reorder folders and columns
-- background image support
-- bug fixes
-- new name (formerly New Tab + Bookmark Tree)
+- Added apps, most visited, recently closed, and weather
+- More flexible layout with unlimited columns
+- Open all links in folder from context menu
+- Color themes and new default style
+- Added smooth animation and highlight shadow
+- Drag and drop to reorder folders and columns
+- Background image support
+- Bug fixes
+- New name (formerly New Tab + Bookmark Tree)
 
 Version 1.1 - July 20, 2011
 
-- added options menu
+- Added options menu
 
 Version 1.0 - July 17, 2011
 
-- initial release
+- Initial release
