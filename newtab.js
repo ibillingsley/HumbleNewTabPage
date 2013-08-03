@@ -26,6 +26,14 @@ function render(node, target) {
 				return false;
 			};
 		}
+		// fix opening chrome:// and file:/// urls
+		var urlStart = url.substring(0, 6);
+		if (urlStart === 'chrome' || urlStart === 'file:/')
+			a.onclick = function() {
+				openLink(node, newtab);
+				return false;
+			};
+
 	} else if (!node.children && !node.type)
 		a.style.pointerEvents = 'none';
 
