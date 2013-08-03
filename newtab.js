@@ -1058,6 +1058,11 @@ function getWeather(callback) {
 			navigator.geolocation.getCurrentPosition(function(pos) {
 				geopos = pos.coords;
 				refreshWeather();
+			}, function(error) {
+				if (!getConfig('weather_location')) {
+					setConfig('show_weather', 0);
+					showConfig('show_weather');
+				}
 			});
 		}
 		return;
