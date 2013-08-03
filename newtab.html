@@ -17,7 +17,7 @@
 		<li><a href="#options/appearance">Appearance</a></li>
 		<li><a href="#options/advanced">Advanced</a></li>
 	</ul>
-	<div class="current">
+	<div class="section current">
 	<fieldset>
 		<legend>Settings</legend>
 		<label><span>Open links in</span><select id="options_newtab">
@@ -32,8 +32,7 @@
 	</fieldset>
 	<fieldset>
 		<legend>Content</legend>
-		<label><span>Bookmarks bar</span><input id="options_show_1" type="checkbox"/></label>
-		<label><span>Other bookmarks</span><input id="options_show_2" type="checkbox"/></label>
+		<div id="options_show_bookmarks"></div>
 		<label><span>Most visited</span><input id="options_show_top" type="checkbox"/></label>
 		<label><span>Apps</span><input id="options_show_apps" type="checkbox"/></label>
 		<label><span>Recent bookmarks</span><input id="options_show_recent" type="checkbox"/></label>
@@ -48,7 +47,7 @@
 			<option value="f">Fahrenheit</option>
 		</select></label>
 	</fieldset>
-	</div><div>
+	</div><div class="section">
 	<fieldset>
 		<legend>Font</legend>
 		<label><span>Font</span><input id="options_font" type="text"/></label>
@@ -103,7 +102,7 @@
 			<option value="no-repeat">None</option>
 		</select></label>
 	</fieldset>
-	</div><div>
+	</div><div class="section">
 	<fieldset>
 		<legend>Generated CSS</legend>
 		<label><textarea id="all_css" disabled></textarea></label>

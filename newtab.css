@@ -163,14 +163,14 @@ body {
 	margin-right: -1px;
 	outline: none;
 }
-#options div {
+#options .section {
 	margin-left: 10em;
 	margin-top: -1px;
 	padding: 1px 0;
 	background-color: #FAFAFA;
 	display: none;
 }
-#options div.current {
+#options .section.current {
 	display: block;
 }
 #options_button {
@@ -270,7 +270,7 @@ input[type="file"]::-webkit-file-upload-button {
 .weather .icon {
 	background-image: none;
 }
-/* The following icons are copyright (c) 2012 The Chromium Authors. 
+/* The following icons are copyright (c) 2012 The Chromium Authors.
    see LICENSE_chromium_BSD.txt */
 .recent .icon {
 	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAABLklEQVQoz2NgIA0Ic+CUEuWTalI4oPRM6bHcVslEDGkJM9XzRs+snm240HTD6pn+M8WtYhJI0pISurftngU883g2L6d1ldcz32eWz7R2iTHDFRhOtX8W8izimfuz5sjSud5AViBQiUoEXIH1vYBnkUDo/qwpsmSuF5AV8czzmcc2qLSisP2zcLiC+qleYHbgM88bUAUzZJ3BQpEgXYt/BrXcDASyQ56F3oEq+M8T9igMrCDomfUzgwn/q0rvhgJNKDoPd8OMYxA3hD/zBzrOZFXQnZBnfs92ToMr+BmTez8IrsTtmQ+QnHj1vw5cwX/mJ/Mr7gQB7Q1/FgoMj8BnM699zUEJyf9C/3sPnO+9kXu/9N6U65dP/E/9z4oR3P9t/pf+n/t/8v+c/+okxC8AEkSjB4OtKa0AAAAASUVORK5CYII=);

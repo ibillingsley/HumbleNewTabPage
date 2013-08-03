@@ -1211,8 +1211,6 @@ var config = {
 	lock: 0,
 	weather_location: '',
 	weather_units: 'c',
-	show_1: 1,
-	show_2: 1,
 	show_top: 1,
 	show_apps: 1,
 	show_recent: 1,
@@ -1558,7 +1556,13 @@ function initSettings() {
 	if (settingsInitialized)
 		return;
 
-	settingsInitialized = true;
+	// options menu
+	document.getElementById('options_button').onclick = function() {
+		for (var key in config)
+			showConfig(key);
+
+		return true;
+	};
 
 	// options submenu navigation
 	var options = document.getElementById('options');
@@ -1569,11 +1573,11 @@ function initSettings() {
 		a.onclick = function(e) {
 			// clear current style
 			nav.children[index].firstChild.classList.remove('current');
-			options.getElementsByTagName('div')[index].classList.remove('current');
+			options.getElementsByClassName('section')[index].classList.remove('current');
 			// apply new current style
 			index = Array.prototype.indexOf.call(nav.children, this.parentNode);
 			nav.children[index].firstChild.classList.add('current');
-			options.getElementsByTagName('div')[index].classList.add('current');
+			options.getElementsByClassName('section')[index].classList.add('current');
 			// show custom css on advanced tab
 			if (index == nav.children.length-1) {
 				var allcss = document.getElementById('all_css');
@@ -1588,59 +1592,73 @@ function initSettings() {
 		};
 	}
 
-	// check if fontSettings enabled
-	if (chrome.fontSettings) {
+	// add options to hide bookmark folders
+	chrome.bookmarks.getTree(function(result) {
+		var placeholder = document.getElementById('options_show_bookmarks');
+		var nodes = result[0].children;
+		for (var i = 0; i < nodes.length; i++) {
+			var key = 'show_' + nodes[i].id;
+			config[key] = 1;
+
+			var span = document.createElement('span');
+			span.innerText = nodes[i].title;
+
+			var input = document.createElement('input');
+			input.type = 'checkbox';
+			input.id = 'options_' + key;
+
+			var label = document.createElement('label');
+			label.appendChild(span);
+			label.appendChild(input);
+			placeholder.appendChild(label);
+		}
+
 		// replace text input with system font list
 		var input = document.getElementById('options_font');
 		var select = document.createElement('select');
 		input.parentNode.replaceChild(select, input);
 		select.id = input.id;
-	}
 
-	// show settings
-	for (var key in config)
-		initConfig(key);
+		// all input elements for options should be in place
+		settingsInitialized = true;
 
-	loadSettings();
-
-	// options menu
-	document.getElementById('options_button').onclick = function() {
+		// show settings
 		for (var key in config)
-			showConfig(key);
+			initConfig(key);
 
-		return true;
-	};
+		loadSettings();
 
-	// load themes
-	var select = document.getElementById('options_theme');
-	if (select.childNodes.length === 0) {
-		for (var i in themes) {
-			var option = document.createElement('option');
-			option.innerText = i;
-			if (i == getConfig('theme'))
-				option.selected = 'selected';
-			select.appendChild(option);
-		}
-	}
-
-	// load font list
-	if (chrome.fontSettings) {
-		chrome.fontSettings.getFontList(function(fonts)  {
-			var select = document.getElementById('options_font');
-			if (select.childNodes.length > 0)
-				return;
-
-			fonts.unshift({ fontId: 'Sans-serif' });
-			for (var i = 0; i < fonts.length; i++) {
-				var font = fonts[i].fontId;
+		// load themes
+		var select = document.getElementById('options_theme');
+		if (select.childNodes.length === 0) {
+			for (var i in themes) {
 				var option = document.createElement('option');
-				option.innerText = font;
-				if (font == getConfig('font'))
+				option.innerText = i;
+				if (i == getConfig('theme'))
 					option.selected = 'selected';
 				select.appendChild(option);
 			}
-		});
-	}
+		}
+
+		// load font list
+		if (chrome.fontSettings) {
+			chrome.fontSettings.getFontList(function(fonts)  {
+				var select = document.getElementById('options_font');
+				if (select.childNodes.length > 0)
+					return;
+
+				fonts.unshift({ fontId: 'Sans-serif' });
+				for (var i = 0; i < fonts.length; i++) {
+					var font = fonts[i].fontId;
+					var option = document.createElement('option');
+					option.innerText = font;
+					if (font == getConfig('font'))
+						option.selected = 'selected';
+					select.appendChild(option);
+				}
+			});
+		}
+	});
 }
 
 // initialize page
