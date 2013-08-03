@@ -6,7 +6,7 @@ function render(node, target) {
 	var a = document.createElement('a');
 
 	var url = node.url || node.appLaunchUrl;
-	a.href = url || '#';
+	a.href = url || '#' + (node.title || node.name);
 	a.innerText = node.title || node.name;
 	setClass(a, node);
 
@@ -43,50 +43,11 @@ function render(node, target) {
 		}
 
 		// click handlers
-		addHandlers(node, a);
+		addFolderHandlers(node, a);
 		enableDragFolder(node, a);
 
-	} else if (node.appLaunchUrl) {
-		a.oncontextmenu = function () {
-			var menuItems = [];
-
-			if (node.optionsUrl) {
-				menuItems.push({
-					label: 'Options',
-					action: function () {
-						window.location = node.optionsUrl;
-					}
-				});
-			}
-
-			if (node.homepageUrl) {
-				menuItems.push({
-					label: 'Open in WebStore',
-					action: function () {
-						window.location = node.homepageUrl;
-					}
-				});
-			}
-
-			if (node.mayDisable) {
-				menuItems.push({
-					label: 'Uninstall',
-					action: function () {
-						if (confirm('Sure to uninstall the app\n' +
-								a.innerText))
-							chrome.management
-								.uninstall(node.id, chrome.tabs.reload);
-					}
-				});
-			}
-
-			if (menuItems.length) {
-				renderMenu(menuItems, event.pageX, event.pageY);
-				return false;
-			}
-		};
-
-	}
+	} else if (node.type)
+		addAppHandlers(node, a);
 
 	target.appendChild(li);
 	return li;
@@ -166,7 +127,7 @@ function renderColumns() {
 }
 
 // enables click and context menu for given folder
-function addHandlers(node, a) {
+function addFolderHandlers(node, a) {
 	// click handler
 	a.onclick = function() {
 		toggle(node, a, getChildrenFunction(node));
@@ -229,6 +190,52 @@ function addHandlers(node, a) {
 	a.oncontextmenu = function(event) {
 		renderMenu(items, event.pageX, event.pageY);
 		return false;
+	};
+}
+
+// enables click and context menu for given app
+function addAppHandlers(node, a) {
+	a.oncontextmenu = function () {
+		var menuItems = [];
+
+		if (node.appLaunchUrl) {
+			menuItems.push({
+				label: 'Open in new tab',
+				action: function () {
+					openLink(node, 1);
+				}
+			});
+		}
+		if (node.optionsUrl) {
+			menuItems.push({
+				label: 'Options',
+				action: function () {
+					window.location = node.optionsUrl;
+				}
+			});
+		}
+		if (node.homepageUrl) {
+			menuItems.push({
+				label: 'Open in Web Store',
+				action: function () {
+					window.location = node.homepageUrl;
+				}
+			});
+		}
+		if (node.mayDisable) {
+			menuItems.push({
+				label: 'Uninstall',
+				action: function () {
+					if (confirm('Uninstall "' + a.innerText + '"?'))
+						chrome.management.uninstall(node.id, chrome.tabs.reload);
+				}
+			});
+		}
+
+		if (menuItems.length) {
+			renderMenu(menuItems, event.pageX, event.pageY);
+			return false;
+		}
 	};
 }
 
@@ -809,13 +816,23 @@ function animate(node, a, isopen) {
 function openLinks(node) {
 	chrome.tabs.getCurrent(function(tab) {
 		getChildrenFunction(node)(function(result) {
-			for (var i = 0; i < result.length; i++) {
-				var url = result[i].url || result[i].appLaunchUrl;
-				if (url)
-					chrome.tabs.create({url: url, active: false, openerTabId: tab.id});
-			}
+			for (var i = 0; i < result.length; i++)
+				openLink(result[i], true);
 		});
 	});
+}
+
+// opens given node
+function openLink(node, newtab) {
+	var url = node.url || node.appLaunchUrl;
+	if (url) {
+		chrome.tabs.getCurrent(function(tab) {
+			if (newtab)
+				chrome.tabs.create({url: url, active: (newtab == 1), openerTabId: tab.id});
+			else
+				chrome.tabs.update(tab.id, {url: url});
+		});
+	}
 }
 
 var columns; // columns[x][y] = id
@@ -999,7 +1016,7 @@ function refreshClosed() {
 			targets.push(a.parentNode);
 		}
 	}
-	if (folders.length === 0) {
+	if (folders.length === 0 && coords['closed']) {
 		var target = document.getElementsByClassName('column')[coords['closed'].x];
 		target.removeChild(target.firstChild);
 		targets.push(target);
@@ -1032,7 +1049,7 @@ function getWeather(callback) {
 		'" and woeid in (select woeid from geo.placefinder where text="' +
 		( geopos ?
 			geopos.latitude + ' ' + geopos.longitude + '" and gflags="R" ' :
-			getConfig('weather_location') + '" '
+			loc + '" '
 		) + 'and focus="" limit 1) limit 1';
 
 	var url = 'http://query.yahooapis.com/v1/public/yql?format=json&q=' + encodeURIComponent(query);
@@ -1438,7 +1455,10 @@ function loadSettings() {
 	theme = themes[getConfig('theme')] || {};
 	// load settings
 	for (var key in config)
-		onChange(key);
+		if (key === 'background_image_file')
+			setTimeout(function() { onChange('background_image_file'); }, 0);
+		else
+			onChange(key);
 }
 
 // apply config values to input controls
