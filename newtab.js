@@ -26,7 +26,7 @@ function render(node, target) {
 				return false;
 			};
 		}
-	} else if (!node.children)
+	} else if (!node.children && !node.type)
 		a.style.pointerEvents = 'none';
 
 	li.appendChild(a);
@@ -59,7 +59,7 @@ function renderAll(nodes, target, toplevel) {
 	for (var i = 0; i < nodes.length; i++) {
 		var node = nodes[i];
 		// skip extensions and duplicated child folders
-		if (toplevel || (node.isApp !== false && !coords[node.id]))
+		if (toplevel || !coords[node.id])
 			render(node, ul);
 	}
 	if (ul.childNodes.length === 0)
@@ -195,6 +195,12 @@ function addFolderHandlers(node, a) {
 
 // enables click and context menu for given app
 function addAppHandlers(node, a) {
+	if (!node.appLaunchUrl && node.id) {
+		a.onclick = function() {
+			chrome.management.launchApp(node.id);
+			return false;
+		};
+	}
 	a.oncontextmenu = function () {
 		var menuItems = [];
 
@@ -594,12 +600,11 @@ function getChildrenFunction(node) {
 		case 'apps':
 			return function(callback) {
 				chrome.management.getAll(function(result) {
-					var enabledApps = [];
-					for (var i = 0, len = result.length; i < len; ++i) {
-						if (result[i].enabled)
-							enabledApps.push(result[i]);
-					}
-					enabledApps.sort(function (a, b) {
+					result = result.filter(function(a) {
+						return a.enabled && a.type !== 'extension' && a.type !== 'theme' &&
+							a.id !== 'nmmhkkegccagdldgiimedpiccmgmieda';// hide "Google Wallet Service"
+					});
+					result.sort(function (a, b) {
 						if (a.name < b.name)
 							return -1;
 						else if (a.name > b.name)
@@ -607,8 +612,13 @@ function getChildrenFunction(node) {
 						else
 							return 0;
 					});
-					enabledApps.unshift({ id: 'webstore', name: 'Chrome Web Store', appLaunchUrl: 'https://chrome.google.com/webstore' });
-					callback(enabledApps);
+					result.push({
+						id: 'webstore',
+						name: 'Chrome Web Store',
+						appLaunchUrl: 'https://chrome.google.com/webstore',
+						icon: 'https://www.google.com/images/icons/product/chrome_web_store-32.png'
+					});
+					callback(result);
 				});
 			};
 		case 'recent':
