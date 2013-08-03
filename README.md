@@ -29,6 +29,10 @@ This project is licensed under the **MIT License**, see ``LICENSE_MIT.txt`` for 
 Changelog
 ---------
 
+Version 1.11 - August 3, 2013
+
+- Fixed new tab page showing in recently closed list
+
 Version 1.10 - August 3, 2013
 
 - Fixed launching packaged apps (Google Keep)

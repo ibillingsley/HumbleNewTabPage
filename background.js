@@ -9,7 +9,7 @@ var expireHandle = null;
 
 // store tab info in memory
 function storeTab(tab) {
-	if (tab.url)
+	if (tab.url && tab.url.substring(0, 15) !== 'chrome://newtab')
 		tabs[tab.id] = {url: tab.url, title: tab.title || tab.url};
 }
 
