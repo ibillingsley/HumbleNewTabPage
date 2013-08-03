@@ -856,9 +856,19 @@ function openLink(node, newtab) {
 var columns; // columns[x][y] = id
 var root; // root[] = id
 var coords; // coords[id] = {x:x, y:y}
+var special = ['top', 'apps', 'recent', 'weather', 'closed'];
 
 // ensure root folders are included
 function verifyColumns() {
+	// default layout
+	if (columns.length === 0) {
+		columns.push([]);
+		columns.push(special.filter(function(a) {
+			return getConfig('show_' + a) != false;
+		}));
+	}
+
+	// find missing root items
 	var missing = root.slice(0);
 	for (var x = 0; x < columns.length; x++) {
 		for (var y = 0; y < columns[x].length; y++) {
@@ -866,24 +876,26 @@ function verifyColumns() {
 			if (i > -1)
 				missing.splice(i, 1);
 		}
+	}
+
+	// add missing root items
+	var column = columns[0];
+	for (var i = 0; i < missing.length; i++) {
+		if (getConfig('show_' + missing[i]) != false)
+			column.push(missing[i]);
+	}
+
+	// populate coordinate map
+	coords = {};
+	for (var x = 0; x < columns.length; x++) {
+		for (var y = 0; y < columns[x].length; y++) {
+			coords[columns[x][y]] = { x: x, y: y};
+		}
 		if (columns[x].length === 0) {
 			columns.splice(x, 1);
 			x--;
 		}
 	}
-
-	if (columns.length === 0)
-		columns.push([]);
-	// add missing root items
-	var column = columns[0];
-	for (var i = 0; i < missing.length; i++)
-		column.push(missing[i]);
-
-	// populate coordinate map
-	coords = {};
-	for (var x = 0; x < columns.length; x++)
-		for (var y = 0; y < columns[x].length; y++)
-			coords[columns[x][y]] = { x: x, y: y};
 }
 
 // load columns from storage or default
@@ -905,14 +917,11 @@ function loadColumns() {
 		chrome.bookmarks.getTree(function(result) {
 			// init root nodes
 			var nodes = result[0].children;
-			var special = ['top', 'apps', 'recent', 'weather', 'closed'];
-			root = [];
+			root = special.slice(0);
+
 			for (var i = 0; i < nodes.length; i++)
-				if (getConfig('show_' + nodes[i].id) != false)
-					root.push(nodes[i].id);
-			for (var i = 0; i < special.length; i++)
-				if (getConfig('show_' + special[i]))
-					root.push(special[i]);
+				root.push(nodes[i].id);
+
 			verifyColumns();
 			renderColumns();
 		});
@@ -1331,14 +1340,11 @@ function setConfig(key, value) {
 		refreshWeather();
 	} else if (key.substring(0,4) == 'show') {
 		var id = key.substring(5);
-		var i = root.indexOf(id);
-		if (i > -1 && !value) {
-			root.splice(i, 1);
+		if (!value) {
 			if (coords[id])
 				removeRow(coords[id].x, coords[id].y);
 			saveColumns();
-		} else if (value) {
-			root.push(id);
+		} else {
 			saveColumns();
 		}
 	}
