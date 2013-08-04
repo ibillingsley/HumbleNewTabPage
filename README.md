@@ -3,27 +3,34 @@ Humble New Tab Page
 
 *An extension for Google Chrome™*
 
-![](https://github.com/quodroc/HumbleNewTabPage/raw/master/media/shot.1.png)
+![](media/shot.1.png)
 
 Redesigned new tab page featuring your bookmarks, apps, most visited, recently closed, and weather in a custom layout.
 
 [Get it in the Chrome Web Store](https://chrome.google.com/webstore/detail/mfgdmpfihlmdekaclngibpjhdebndhdj)
+
+Features:
+
+- Simple, clean design
+- Highly customizable
+- Fast loading and lightweight
+- Completely free and open source
 
 This extension replaces the default new tab page. Drag and drop folders to create new columns or reorder them. The font, colors, spacing, and more can be customized from the options menu.
 
 
 Screenshots
 -----------
-![](https://github.com/quodroc/HumbleNewTabPage/raw/master/media/shot.2.png)
-![](https://github.com/quodroc/HumbleNewTabPage/raw/master/media/shot.3.png)
-![](https://github.com/quodroc/HumbleNewTabPage/raw/master/media/shot.4.png)
-![](https://github.com/quodroc/HumbleNewTabPage/raw/master/media/shot.5.png)
+![](media/shot.2.png)
+![](media/shot.3.png)
+![](media/shot.4.png)
+![](media/shot.5.png)
 
 
 License
 -------
 
-This project is licensed under the **MIT License**, see ``LICENSE_MIT.txt`` for details.
+This project is licensed under the **MIT License**, see [LICENSE_MIT.txt](LICENSE_MIT.txt) for details.
 
 
 Changelog
