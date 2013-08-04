@@ -609,7 +609,7 @@ function getChildrenFunction(node) {
 			return function(callback) {
 				chrome.management.getAll(function(result) {
 					result = result.filter(function(a) {
-						return a.enabled && a.type !== 'extension' && a.type !== 'theme' &&
+						return a.enabled && a.type !== 'extension' && a.type !== 'theme' && a.isApp !== false &&
 							a.id !== 'nmmhkkegccagdldgiimedpiccmgmieda';// hide "Google Wallet Service"
 					});
 					result.sort(function (a, b) {
@@ -835,7 +835,7 @@ function openLinks(node) {
 	chrome.tabs.getCurrent(function(tab) {
 		getChildrenFunction(node)(function(result) {
 			for (var i = 0; i < result.length; i++)
-				openLink(result[i], true);
+				openLink(result[i], 2);
 		});
 	});
 }
