@@ -7,7 +7,7 @@ function render(node, target) {
 
 	var url = node.url || node.appLaunchUrl;
 	a.href = url || '#' + (node.title || node.name);
-	a.innerText = node.title || node.name;
+	a.innerText = node.title || node.name || '';
 	setClass(a, node);
 
 	a.insertBefore(getIcon(node), a.firstChild);
