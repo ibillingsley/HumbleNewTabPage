@@ -36,6 +36,10 @@ This project is licensed under the **MIT License**, see [LICENSE_MIT.txt](LICENS
 Changelog
 ---------
 
+Version 1.12 - August 18, 2013
+
+- Reorder apps via drag and drop
+
 Version 1.11 - August 3, 2013
 
 - Fixed launching packaged apps (Google Keep)

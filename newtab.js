@@ -251,6 +251,84 @@ function addAppHandlers(node, a) {
 			return false;
 		}
 	};
+
+	// enable drag and drop ordering of app. TODO refactor
+	a.draggable = true;
+	a.ondragstart = function(event) {
+		dragIds = [node.id];
+		event.stopPropagation();
+		event.dataTransfer.effectAllowed = 'move copy';
+		this.classList.add('dragstart');
+	};
+	a.ondragend = function(event) {
+		dragIds = null;
+		this.classList.remove('dragstart');
+		clearDropTarget();
+	};
+	var li = a.parentNode;
+	li.ondragover = function(event) {
+		event.preventDefault();
+		event.stopPropagation();
+		event.dataTransfer.dropEffect = 'move';
+		// highlight drop target
+		var target = event.target;
+		while (target && target.tagName != 'A')
+			target = target.parentNode;
+
+		if (target) {
+			clearDropTarget();
+			dropTarget = target;
+			var bordercss = 'solid 2px ' + getConfig('font_color');
+			if (isAbove(event.pageY, target)) {
+				target.style.borderBottom = bordercss;
+				target.style.margin = '0 0 -2px 0';
+			} else {
+				target.style.borderTop = bordercss;
+				target.style.margin = '-2px 0 0 0';
+			}
+		}
+		return false;
+	};
+
+	li.ondragleave = function(event) {
+		clearDropTarget();
+	};
+
+	li.ondrop = function(event) {
+		event.stopPropagation();
+
+		var target = event.target;
+		while (target && target.tagName != 'A')
+			target = target.parentNode;
+
+		if (!target)
+			return false;
+
+		// saves app order to local storage
+		var index = appsOrder.indexOf(node.id);
+		var oldIndex = appsOrder.indexOf(dragIds[0]);
+		if (index == -1 || oldIndex == -1)
+			return false;
+
+		if (isAbove(event.pageY, target))
+			index++;
+
+		if (oldIndex < index)
+			index--;
+
+		appsOrder.splice(oldIndex, 1);
+		appsOrder.splice(index, 0, dragIds[0]);
+
+		localStorage.setItem('apps.order', JSON.stringify(appsOrder));
+
+		// refresh
+		var parent = li.parentNode.parentNode;
+		parent.removeChild(li.parentNode);
+		getChildrenFunction({id: 'apps'})(function(result) {
+			renderAll(result, parent);
+		});
+		return false;
+	};
 }
 
 // enables context menu for given column
@@ -607,25 +685,7 @@ function getChildrenFunction(node) {
 			};
 		case 'apps':
 			return function(callback) {
-				chrome.management.getAll(function(result) {
-					result = result.filter(function(a) {
-						return a.enabled && a.type !== 'extension' && a.type !== 'theme' && a.isApp !== false &&
-							a.id !== 'nmmhkkegccagdldgiimedpiccmgmieda';// hide "Google Wallet Service"
-					});
-					result.sort(function (a, b) {
-						if (a.name < b.name)
-							return -1;
-						else if (a.name > b.name)
-							return 1;
-						else
-							return 0;
-					});
-					result.push({
-						id: 'webstore',
-						name: 'Chrome Web Store',
-						appLaunchUrl: 'https://chrome.google.com/webstore',
-						icon: 'https://www.google.com/images/icons/product/chrome_web_store-32.png'
-					});
+				getApps(function(result) {
 					callback(result);
 				});
 			};
@@ -1011,6 +1071,47 @@ function addRow(id, xpos, ypos) {
 function removeRow(xpos, ypos) {
 	columns[xpos].splice(ypos, 1);
 	saveColumns();
+}
+
+var appsOrder;
+
+// gets apps
+function getApps(callback) {
+	chrome.management.getAll(function(result) {
+		result = result.filter(function(a) {
+			return a.enabled && a.type !== 'extension' && a.type !== 'theme' && a.isApp !== false &&
+				a.id !== 'nmmhkkegccagdldgiimedpiccmgmieda';// hide "Google Wallet Service"
+		});
+
+		result.push({
+			id: 'webstore',
+			name: 'Chrome Web Store',
+			appLaunchUrl: 'https://chrome.google.com/webstore',
+			icon: 'https://www.google.com/images/icons/product/chrome_web_store-32.png',
+			type: 'hosted_app'
+		});
+
+		// order apps
+		var order = appsOrder || JSON.parse(localStorage.getItem('apps.order')) || [];
+
+		result.sort(function (a, b) {
+			var diff = order.indexOf(a.id) - order.indexOf(b.id);
+			if (diff)
+				return diff;
+			else if (a.name < b.name)
+				return -1;
+			else if (a.name > b.name)
+				return 1;
+			else
+				return 0;
+		});
+
+		appsOrder = [];
+		for (var i = 0; i < result.length; i++)
+			appsOrder.push(result[i].id);
+
+		callback(result);
+	});
 }
 
 // get recently closed tabs
