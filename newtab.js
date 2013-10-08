@@ -1715,10 +1715,12 @@ function initSettings() {
 		}
 
 		// replace text input with system font list
-		var input = document.getElementById('options_font');
-		var select = document.createElement('select');
-		input.parentNode.replaceChild(select, input);
-		select.id = input.id;
+		if (chrome.fontSettings) {
+			var input = document.getElementById('options_font');
+			var select = document.createElement('select');
+			input.parentNode.replaceChild(select, input);
+			select.id = input.id;
+		}
 
 		// all input elements for options should be in place
 		settingsInitialized = true;
