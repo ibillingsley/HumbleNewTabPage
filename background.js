@@ -1,7 +1,7 @@
 'use strict';
 
 var tabs = {};
-var size = 10;
+var size = Number(localStorage.getItem('options.number_closed')) || 10;
 var index = Number(localStorage.getItem('closed.index')) || 0;
 var weather = null;
 var weatherUrl = null;
