@@ -691,7 +691,7 @@ function getChildrenFunction(node) {
 			};
 		case 'recent':
 			return function(callback) {
-				chrome.bookmarks.getRecent(10, function(result) {
+				chrome.bookmarks.getRecent(getConfig('number_bookmarks'), function(result) {
 					callback(result);
 				});
 			};
@@ -1117,7 +1117,7 @@ function getApps(callback) {
 // get recently closed tabs
 function getClosed(callback) {
 	var closed = [];
-	var size = 10;
+	var size = getConfig('number_closed');
 	var start = (Number(localStorage.getItem('closed.index')) - 1) || 0;
 
 	for (var i = 0; i < size; i++) {
@@ -1321,7 +1321,9 @@ var config = {
 	newtab: 0,
 	auto_close: 0,
 	auto_scale: 1,
-	css: ''
+	css: '',
+	number_closed: 10,
+	number_bookmarks: 10
 };
 
 // color theme values
@@ -1437,7 +1439,7 @@ function setConfig(key, value) {
 		}
 	} else if (key.substring(0, 7) == 'weather') {
 		refreshWeather();
-	} else if (key.substring(0,4) == 'show') {
+	} else if (key.substring(0,4) == 'show' || key.substring(0,6) == 'number') {
 		var id = key.substring(5);
 		if (!value) {
 			if (coords[id])
