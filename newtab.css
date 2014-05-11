@@ -247,6 +247,12 @@ input[type="color"]::-webkit-color-swatch-wrapper {
 input[type="file"]::-webkit-file-upload-button {
 	width: 100%;
 }
+.subopt {
+	margin: 0 0 .8em 2.5em;
+}
+.subopt input {
+	width: 4em;
+}
 .revert {
 	display: inline-block;
 	width: 18px;
@@ -289,7 +295,4 @@ input[type="file"]::-webkit-file-upload-button {
 }
 #options_button {
 	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAA6UlEQVQoz2P4z4AfMhCpQFvccKfpS+Mzeim4TODbPiHpnv8bp/dGlbisUP7elPIk+qXrS31+DAVaKVrcQJol9UHa85DXwZYYCpwuWdwzarRdHPUi41n0y+16GApmrgp47fsm6HXii8xnMS9de7QZ0d1gs2Rv5qOU55lPM58lvvB+azpFkxndkc7/e58u+jltxtG053EvvN6az9dixQwogf8sf8O6T6U9jweaYrFSiwNbSDL+TG6+kA5U4vvGYj32oGb6kld3Jf1Z/IvAR7jigvVVRcWNnAebV+KOLM6f1f97/uvji00mGAsAehYJT6WSCbkAAAAASUVORK5CYII=);
-}
-input.small {
-	width: 2em;
 }

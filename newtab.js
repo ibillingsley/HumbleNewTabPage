@@ -209,7 +209,7 @@ function addAppHandlers(node, a) {
 			return false;
 		};
 	}
-	a.oncontextmenu = function () {
+	a.oncontextmenu = function (event) {
 		var menuItems = [];
 
 		if (node.appLaunchUrl) {
@@ -678,7 +678,7 @@ function getChildrenFunction(node) {
 			return function(callback) {
 				if (chrome.topSites)
 					chrome.topSites.get(function(result) {
-						callback(result);
+						callback(result.slice(0, getConfig('number_top')));
 					});
 				else
 					callback([]);
@@ -691,7 +691,7 @@ function getChildrenFunction(node) {
 			};
 		case 'recent':
 			return function(callback) {
-				chrome.bookmarks.getRecent(getConfig('number_bookmarks'), function(result) {
+				chrome.bookmarks.getRecent(getConfig('number_recent'), function(result) {
 					callback(result);
 				});
 			};
@@ -1322,8 +1322,9 @@ var config = {
 	auto_close: 0,
 	auto_scale: 1,
 	css: '',
+	number_top: 20,
 	number_closed: 10,
-	number_bookmarks: 10
+	number_recent: 10
 };
 
 // color theme values
@@ -1427,7 +1428,7 @@ function setConfig(key, value) {
 		value = (theme.hasOwnProperty(key) ? theme[key] : config[key]);
 	}
 	// special case settings
-	if (key == 'lock' || key == 'newtab' || key == 'show_root')
+	if (key == 'lock' || key == 'newtab' || key == 'show_root' || key.substring(0,6) == 'number')
 		loadColumns();
 	else if (key == 'theme') {
 		theme = themes[value];
@@ -1439,7 +1440,7 @@ function setConfig(key, value) {
 		}
 	} else if (key.substring(0, 7) == 'weather') {
 		refreshWeather();
-	} else if (key.substring(0,4) == 'show' || key.substring(0,6) == 'number') {
+	} else if (key.substring(0,4) == 'show') {
 		var id = key.substring(5);
 		if (!value) {
 			if (coords[id])
