@@ -1194,10 +1194,10 @@ function getWeather(callback) {
 
 	var url = 'http://query.yahooapis.com/v1/public/yql?format=json&q=' + encodeURIComponent(query);
 
-	// check cache
-	var bg = chrome.extension.getBackgroundPage();
-	if (bg && bg.weatherUrl == url) {
-		callback(bg.weather);
+	// check cache (15 minute expiry)
+	var cached = JSON.parse(localStorage.getItem('weather.cache'));
+	if (cached && cached.url == url && new Date() - new Date(cached.date) < 1000*60*15) {
+		callback(cached.data);
 		return;
 	}
 
@@ -1279,9 +1279,15 @@ function getWeather(callback) {
 
 // refreshes weather items
 function refreshWeather(data, url) {
-	// clear cache
-	var bg = chrome.extension.getBackgroundPage();
-	if (bg) bg.cacheWeather(data, url);
+	// cache data
+	if (data)
+		localStorage.setItem('weather.cache', JSON.stringify({
+			data: data,
+			url: url,
+			date: new Date()
+		}));
+	else
+		localStorage.removeItem('weather.cache');
 	// render
 	var targets = document.getElementsByClassName('weather');
 	for (var i = 0; i < targets.length; i++) {
