@@ -419,7 +419,14 @@ function getMenuItems(node) {
 		items.push({
 			label: 'Manage apps',
 			action: function() {
-				window.open('https://chrome.google.com/webstore/user/purchases');
+				openLink({ url: 'chrome://apps' }, 1);
+			}
+		});
+	if (Number(node.id))
+		items.push({
+			label: 'Edit bookmarks',
+			action: function() {
+				openLink({ url: 'chrome://bookmarks/#' + node.id }, 1);
 			}
 		});
 	return items;
