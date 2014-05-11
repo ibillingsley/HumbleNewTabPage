@@ -411,8 +411,13 @@ function getMenuItems(node) {
 		items.push({
 			label: 'Clear recently closed',
 			action: function() {
-				var bg = chrome.extension.getBackgroundPage();
-				if (bg) bg.clearClosed();
+				var size = Number(localStorage.getItem('options.number_closed')) || 10;
+				for (var i = 0; i < size; i++) {
+					localStorage.removeItem('closed.' + i + '.url');
+					localStorage.removeItem('closed.' + i + '.title');
+				}
+				localStorage.setItem('closed.index', 0);
+				refreshClosed();
 			}
 		});
 	if (node.id == 'apps')

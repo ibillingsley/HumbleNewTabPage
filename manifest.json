@@ -18,7 +18,8 @@
 		"fontSettings"
 	],
 	"background" : {
-		"scripts" : ["background.js"]
+		"scripts" : ["background.js"],
+		"persistent" : false
 	},
 	"chrome_url_overrides" :
 	{
