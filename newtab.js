@@ -1307,6 +1307,7 @@ var config = {
 	background_image: '',
 	background_align: 'left top',
 	background_repeat: 'repeat',
+	background_size: 'auto',
 	shadow_blur: 1,
 	highlight_round: 1,
 	fade: 1,
@@ -1482,6 +1483,8 @@ function getStyle(key, value) {
 			return 'body { background-position: ' + value + '; }';
 		case 'background_repeat':
 			return 'body { background-repeat: ' + value + '; }';
+		case 'background_size':
+			return 'body { background-size: ' + value + '; }';
 		case 'highlight_font_color':
 			return '#main a:hover { color: ' + value + '; }';
 		case 'highlight_color':
