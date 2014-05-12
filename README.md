@@ -35,7 +35,7 @@ This project is licensed under the **MIT License**, see [LICENSE_MIT.txt](LICENS
 Changelog
 ---------
 
-### Version 1.13 - May 11, 2014
+### Version 1.14 - May 11, 2014
 
 - Reduced memory usage
 - Added option to set number of items for recently closed, recent bookmarks, and most visited

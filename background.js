@@ -1,8 +1,7 @@
 'use strict';
 
 // store tab info in local storage
-function storeTabs(tabs) {
-	var cached = JSON.parse(localStorage.getItem('closed.tabs')) || {};
+function storeTabs(tabs, cached) {
 	for (var i = 0; i < tabs.length; i++) {
 		var tab = tabs[i];
 		if (tab.url && tab.url.substring(0, 15) !== 'chrome://newtab')
@@ -18,13 +17,21 @@ function notifyChange() {
 }
 
 // store initial tabs
-chrome.tabs.query({}, function(result) {
-	storeTabs(result);
+chrome.runtime.onStartup.addListener(function() {
+	chrome.tabs.query({}, function(result) {
+		storeTabs(result, {});
+	});
+});
+
+chrome.runtime.onInstalled.addListener(function() {
+	chrome.tabs.query({}, function(result) {
+		storeTabs(result, {});
+	});
 });
 
 // store tab info on change
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-	storeTabs([tab]);
+	storeTabs([tab], JSON.parse(localStorage.getItem('closed.tabs')) || {});
 });
 
 // store removed tab info
@@ -68,6 +75,7 @@ chrome.tabs.onRemoved.addListener(function(tabId, removeInfo) {
 
 			delete tabs[tabId];
 			notifyChange();
+			storeTabs([], tabs);
 			return;
 		}
 
@@ -85,4 +93,5 @@ chrome.tabs.onRemoved.addListener(function(tabId, removeInfo) {
 
 	delete tabs[tabId];
 	notifyChange();
+	storeTabs([], tabs);
 });

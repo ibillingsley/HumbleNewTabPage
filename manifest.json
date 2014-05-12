@@ -1,6 +1,6 @@
 {
 	"name" : "Humble New Tab Page",
-	"version" : "1.13",
+	"version" : "1.14",
 	"manifest_version": 2,
 	"description" : "Redesigned new tab page featuring your bookmarks, apps, most visited, recently closed, and weather in a custom layout.",
 	"icons" : {
