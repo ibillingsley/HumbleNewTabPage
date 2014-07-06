@@ -1,11 +1,9 @@
 Humble New Tab Page
 ===================
 
-*An extension for Google Chrome™*
+Redesigned new tab page featuring your bookmarks, apps, most visited, recently closed, and weather in a custom layout.
 
 ![](media/shot.1.png)
-
-Redesigned new tab page featuring your bookmarks, apps, most visited, recently closed, and weather in a custom layout.
 
 ### Features
 
@@ -34,6 +32,10 @@ This project is licensed under the **MIT License**, see [LICENSE_MIT.txt](LICENS
 
 Changelog
 ---------
+
+### Version 1.15 - July 6, 2014
+
+- Fixed freezing issues
 
 ### Version 1.14 - May 11, 2014
 

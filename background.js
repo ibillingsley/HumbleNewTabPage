@@ -1,13 +1,16 @@
 'use strict';
 
-// store tab info in local storage
-function storeTabs(tabs, cached) {
-	for (var i = 0; i < tabs.length; i++) {
-		var tab = tabs[i];
-		if (tab.url && tab.url.substring(0, 15) !== 'chrome://newtab')
-			cached[tab.id] = {url: tab.url, title: tab.title || tab.url};
-	}
-	localStorage.setItem('closed.tabs', JSON.stringify(cached));
+var tabs = {};
+var size = Number(localStorage.getItem('options.number_closed')) || 10;
+var index = Number(localStorage.getItem('closed.index')) || 0;
+var weather = null;
+var weatherUrl = null;
+var expireHandle = null;
+
+// store tab info in memory
+function storeTab(tab) {
+	if (tab.url && tab.url.substring(0, 15) !== 'chrome://newtab')
+		tabs[tab.id] = {url: tab.url, title: tab.title || tab.url};
 }
 
 // send message to newtab page to refresh closed list
@@ -16,32 +19,47 @@ function notifyChange() {
 		chrome.extension.sendMessage('tab.closed');
 }
 
-// store initial tabs
-chrome.runtime.onStartup.addListener(function() {
-	chrome.tabs.query({}, function(result) {
-		storeTabs(result, {});
-	});
-});
+// clear recently closed list
+function clearClosed() {
+	for (var i = 0; i < size; i++) {
+		localStorage.removeItem('closed.' + i + '.url');
+		localStorage.removeItem('closed.' + i + '.title');
+	}
+	index = 0;
+	localStorage.setItem('closed.index', index);
+	notifyChange();
+}
 
-chrome.runtime.onInstalled.addListener(function() {
-	chrome.tabs.query({}, function(result) {
-		storeTabs(result, {});
-	});
+// cache weather info in memory temporarily
+function cacheWeather(data, url) {
+	if (expireHandle)
+		clearTimeout(expireHandle);
+
+	weather = data;
+	weatherUrl = url;
+	expireHandle = setTimeout(function() {
+		weather = null;
+		weatherUrl = null;
+		expireHandle = null;
+	}, 1000*60*15);// cache 15 minutes
+}
+
+// store initial tabs
+chrome.tabs.query({}, function(result) {
+	for (var i in result) {
+		storeTab(result[i]);
+	}
 });
 
 // store tab info on change
 chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-	storeTabs([tab], JSON.parse(localStorage.getItem('closed.tabs')) || {});
+	storeTab(tab);
 });
 
 // store removed tab info
 chrome.tabs.onRemoved.addListener(function(tabId, removeInfo) {
-	var tabs = JSON.parse(localStorage.getItem('closed.tabs')) || {};
 	if (!tabs[tabId])
 		return;
-
-	var size = Number(localStorage.getItem('options.number_closed')) || 10;
-	var index = Number(localStorage.getItem('closed.index')) || 0;
 
 	var url = tabs[tabId].url;
 	var title = tabs[tabId].title;
@@ -75,7 +93,6 @@ chrome.tabs.onRemoved.addListener(function(tabId, removeInfo) {
 
 			delete tabs[tabId];
 			notifyChange();
-			storeTabs([], tabs);
 			return;
 		}
 
@@ -93,5 +110,4 @@ chrome.tabs.onRemoved.addListener(function(tabId, removeInfo) {
 
 	delete tabs[tabId];
 	notifyChange();
-	storeTabs([], tabs);
 });

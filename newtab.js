@@ -411,13 +411,8 @@ function getMenuItems(node) {
 		items.push({
 			label: 'Clear recently closed',
 			action: function() {
-				var size = Number(localStorage.getItem('options.number_closed')) || 10;
-				for (var i = 0; i < size; i++) {
-					localStorage.removeItem('closed.' + i + '.url');
-					localStorage.removeItem('closed.' + i + '.title');
-				}
-				localStorage.setItem('closed.index', 0);
-				refreshClosed();
+				var bg = chrome.extension.getBackgroundPage();
+				if (bg) bg.clearClosed();
 			}
 		});
 	if (node.id == 'apps')
@@ -1199,10 +1194,10 @@ function getWeather(callback) {
 
 	var url = 'http://query.yahooapis.com/v1/public/yql?format=json&q=' + encodeURIComponent(query);
 
-	// check cache (15 minute expiry)
-	var cached = JSON.parse(localStorage.getItem('weather.cache'));
-	if (cached && cached.url == url && new Date() - new Date(cached.date) < 1000*60*15) {
-		callback(cached.data);
+	// check cache
+	var bg = chrome.extension.getBackgroundPage();
+	if (bg && bg.weatherUrl == url) {
+		callback(bg.weather);
 		return;
 	}
 
@@ -1284,15 +1279,9 @@ function getWeather(callback) {
 
 // refreshes weather items
 function refreshWeather(data, url) {
-	// cache data
-	if (data)
-		localStorage.setItem('weather.cache', JSON.stringify({
-			data: data,
-			url: url,
-			date: new Date()
-		}));
-	else
-		localStorage.removeItem('weather.cache');
+	// clear cache
+	var bg = chrome.extension.getBackgroundPage();
+	if (bg) bg.cacheWeather(data, url);
 	// render
 	var targets = document.getElementsByClassName('weather');
 	for (var i = 0; i < targets.length; i++) {
