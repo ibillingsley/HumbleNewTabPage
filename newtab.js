@@ -425,6 +425,13 @@ function getMenuItems(node) {
 				openLink({ url: 'chrome://apps' }, 1);
 			}
 		});
+	if (node.id == 'devices')
+		items.push({
+			label: 'History',
+			action: function() {
+				openLink({ url: 'chrome://history' }, 1);
+			}
+		});
 	if (Number(node.id))
 		items.push({
 			label: 'Edit bookmarks',
@@ -711,6 +718,12 @@ function getChildrenFunction(node) {
 					callback(result);
 				});
 			};
+		case 'devices':
+			return function(callback) {
+				getDevices(function(result) {
+					callback(result);
+				});
+			};
 		case 'weather':
 			if (node.children)
 				return function(callback) {
@@ -757,6 +770,9 @@ function getSubTree(id, callback) {
 		case 'closed':
 			callback([{ title: 'Recently closed', id: 'closed', children: true }]);
 			break;
+		case 'devices':
+			callback([{ title: 'Other devices', id: 'devices', children: true }]);
+			break;
 		case 'weather':
 			getWeather(function(result) {
 				callback(result);
@@ -791,6 +807,7 @@ function setClass(target, node, isopen) {
 		case 'apps':
 		case 'recent':
 		case 'closed':
+		case 'devices':
 		case 'weather':
 		case 'empty':
 			target.classList.add(node.id);
@@ -928,7 +945,7 @@ function openLink(node, newtab) {
 var columns; // columns[x][y] = id
 var root; // root[] = id
 var coords; // coords[id] = {x:x, y:y}
-var special = ['top', 'apps', 'recent', 'weather', 'closed'];
+var special = ['top', 'apps', 'recent', 'weather', 'closed', 'devices'];
 
 // ensure root folders are included
 function verifyColumns() {
@@ -1152,6 +1169,33 @@ function getClosed(callback) {
 	});
 }
 
+function getDevices(callback) {
+	chrome.sessions.getDevices({ maxResults: getConfig('number_closed') }, function(devices) {
+		var nodes = [];
+		for (var i = 0; i < devices.length; i++) {
+			(function(device) {
+				var children = [];
+				for (var j = 0; j < device.sessions.length; j++) {
+					var session = device.sessions[j];
+					var tabs = session.window ? session.window.tabs : [session.tab];
+					for (var k = 0; k < tabs.length; k++) {
+						children.push({
+							title: tabs[k].title,
+							url: tabs[k].url
+						});
+					}
+				}
+				nodes.push({
+					id: 'device.' + device.deviceName,
+					title: device.deviceName,
+					children: children
+				});
+			})(devices[i]);
+		}
+		callback(nodes);
+	});
+}
+
 // refresh recently closed tab lists
 function refreshClosed() {
 	var targets = [];
@@ -1343,6 +1387,7 @@ var config = {
 	show_recent: 1,
 	show_weather: 1,
 	show_closed: 1,
+	show_devices: 1,
 	show_root: 0,
 	newtab: 0,
 	auto_close: 0,
