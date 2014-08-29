@@ -36,9 +36,9 @@ body {
 	color: #555;
 	padding: 0 .8em;
 	border-radius: .2em;
-	-webkit-transition-property: color, background-color, box-shadow, opacity;
-	-webkit-transition-duration: 0.2s;
-	-webkit-transition-timing-function: ease-out;
+	transition-property: color, background-color, box-shadow, opacity;
+	transition-duration: 0.2s;
+	transition-timing-function: ease-out;
 }
 #main a:hover {
 	color: #000;
@@ -61,9 +61,9 @@ body {
 	margin-left: -2px;
 }
 .wrap {
-	-webkit-transition-property: height, opacity;
-	-webkit-transition-duration: 0.2s;
-	-webkit-transition-timing-function: ease-out;
+	transition-property: height, opacity;
+	transition-duration: 0.2s;
+	transition-timing-function: ease-out;
 }
 .column {
 	display: inline-block;
