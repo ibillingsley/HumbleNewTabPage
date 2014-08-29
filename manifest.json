@@ -1,28 +1,27 @@
 {
-	"name" : "Humble New Tab Page",
-	"version" : "1.15",
+	"name": "Humble New Tab Page",
+	"version": "1.16",
+	"minimum_chrome_version": "37",
 	"manifest_version": 2,
-	"description" : "Redesigned new tab page featuring your bookmarks, apps, most visited, recently closed, and weather in a custom layout.",
-	"icons" : {
-		"128" : "icon_128.png",
-		 "48" : "icon_48.png",
-		 "16" : "icon_16.png"
+	"description": "Redesigned new tab page featuring your bookmarks, apps, most visited, recently closed, and weather in a custom layout.",
+	"icons": {
+		"128": "icon_128.png",
+		 "48": "icon_48.png",
+		 "16": "icon_16.png"
 	},
-	"permissions" : [
+	"permissions": [
 		"bookmarks",
 		"chrome://favicon/",
 		"topSites",
 		"management",
 		"tabs",
 		"http://query.yahooapis.com/",
-		"fontSettings"
+		"fontSettings",
+		"sessions"
 	],
-	"background" : {
-		"scripts" : ["background.js"]
-	},
-	"chrome_url_overrides" :
+	"chrome_url_overrides":
 	{
-		"newtab" : "newtab.html"
+		"newtab": "newtab.html"
 	},
 	"options_page": "newtab.html#options",
 	"web_accessible_resources": [

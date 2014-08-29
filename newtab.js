@@ -12,7 +12,11 @@ function render(node, target) {
 
 	a.insertBefore(getIcon(node), a.firstChild);
 
-	if (url) {
+	if (node.action) {
+		a.onclick = function(event) {
+			return node.action();
+		};
+	} else if (url) {
 		var newtab = getConfig('newtab');
 		if (newtab == 1) {
 			// new foreground tab
@@ -409,10 +413,9 @@ function getMenuItems(node) {
 		});
 	if (node.id == 'closed')
 		items.push({
-			label: 'Clear recently closed',
+			label: 'Clear browsing data',
 			action: function() {
-				var bg = chrome.extension.getBackgroundPage();
-				if (bg) bg.clearClosed();
+				openLink({ url: 'chrome://settings/clearBrowserData' }, 1);
 			}
 		});
 	if (node.id == 'apps')
@@ -774,6 +777,8 @@ function getSubTree(id, callback) {
 
 // sets css classes for node
 function setClass(target, node, isopen) {
+	if (node.className)
+		target.classList.add(node.className);
 	if (node.children)
 		target.classList.add('folder');
 	if (isopen)
@@ -1123,21 +1128,28 @@ function getApps(callback) {
 
 // get recently closed tabs
 function getClosed(callback) {
-	var closed = [];
-	var size = getConfig('number_closed');
-	var start = (Number(localStorage.getItem('closed.index')) - 1) || 0;
+	chrome.sessions.getRecentlyClosed({ maxResults: getConfig('number_closed') }, function(sessions) {
+		var nodes = [];
+		for (var i = 0; i < sessions.length; i++) {
+			(function(session) {
+				if (session.window && session.window.tabs.length == 1)
+					session.tab = session.window.tabs[0];
 
-	for (var i = 0; i < size; i++) {
-		var index = (start - i + size) % size;
-		var url = localStorage.getItem('closed.' + index + '.url');
-		if (!url)
-			break;
-
-		var title = localStorage.getItem('closed.' + index + '.title');
-		closed.push({url: url, title: title});
-	}
-
-	callback(closed);
+				nodes.push({
+					title: session.tab ? session.tab.title : session.window.tabs.length + ' Tabs',
+					url: session.tab ? session.tab.url : null,
+					className: session.window ? 'window' : null,
+					action: function() {
+						chrome.sessions.restore(session.window ? session.window.sessionId : session.tab.sessionId, function(session) {
+							refreshClosed();
+						});
+						return false;
+					}
+				});
+			})(sessions[i]);
+		}
+		callback(nodes);
+	});
 }
 
 // refresh recently closed tab lists
@@ -1801,8 +1813,6 @@ window.onhashchange = function(event) {
 window.onhashchange();
 
 // refresh recently closed on tab close
-if (chrome.extension.onMessage)
-	chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
-		if (request == 'tab.closed')
-			refreshClosed();
-	});
+chrome.tabs.onRemoved.addListener(function(tabId, removeInfo) {
+	refreshClosed();
+});
