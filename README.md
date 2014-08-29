@@ -33,6 +33,13 @@ This project is licensed under the **MIT License**, see [LICENSE_MIT.txt](LICENS
 Changelog
 ---------
 
+### Version 1.16 - August 29, 2014
+
+- Added other devices folder
+- Recently closed tabs preserve history
+- Removed background process
+- Chrome version 37 or later required
+
 ### Version 1.15 - July 6, 2014
 
 - Fixed freezing issues
