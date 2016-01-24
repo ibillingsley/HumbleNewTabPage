@@ -23,6 +23,10 @@
 	{
 		"newtab": "newtab.html"
 	},
+	"background" : {
+		"scripts" : ["background.js"],
+		"persistent" : true
+	},
 	"options_page": "newtab.html#options",
 	"web_accessible_resources": [
 		"newtab.html"
