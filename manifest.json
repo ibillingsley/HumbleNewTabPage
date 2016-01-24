@@ -1,6 +1,6 @@
 {
 	"name": "Humble New Tab Page",
-	"version": "1.16",
+	"version": "1.17",
 	"minimum_chrome_version": "37",
 	"manifest_version": 2,
 	"description": "Redesigned new tab page featuring your bookmarks, apps, most visited, recently closed, and weather in a custom layout.",
