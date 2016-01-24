@@ -1857,7 +1857,6 @@ window.onhashchange = function(event) {
 };
 window.onhashchange();
 
-// refresh recently closed on tab close
-chrome.tabs.onRemoved.addListener(function(tabId, removeInfo) {
-	refreshClosed();
-});
+// refresh recently closed
+if (chrome.sessions)
+	chrome.sessions.onChanged.addListener(refreshClosed);
