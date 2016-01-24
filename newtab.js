@@ -1242,7 +1242,7 @@ function getWeather(callback) {
 	}
 
 	var query = 'select * from weather.forecast where u="' + getConfig('weather_units') +
-		'" and woeid in (select woeid from geo.placefinder where text="' +
+		'" and woeid in (select woeid from ' + ( geopos ? 'geo.placefinder' : 'geo.places' ) + ' where text="' +
 		( geopos ?
 			geopos.latitude + ' ' + geopos.longitude + '" and gflags="R" ' :
 			loc + '" '
@@ -1252,7 +1252,7 @@ function getWeather(callback) {
 
 	// check cache (15 minute expiry)
 	var cached = JSON.parse(localStorage.getItem('weather.cache'));
-	if (cached && cached.url == url && new Date() - new Date(cached.date) < 1000*60*15) {
+	if (cached && new Date() - new Date(cached.date) < 1000*60*15) {
 		callback(cached.data);
 		return;
 	}
@@ -1329,7 +1329,7 @@ function getWeather(callback) {
 	request.onerror = onerror;
 	request.ontimeout = onerror;
 
-	request.open('GET', url, true);
+	request.open('GET', url + '&' + Date.now(), true);
 	request.send();
 }
 
