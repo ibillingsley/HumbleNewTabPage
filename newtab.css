@@ -36,6 +36,7 @@ body {
 	color: #555;
 	padding: 0 .8em;
 	border-radius: .2em;
+	cursor: pointer;
 	transition-property: color, background-color, box-shadow, opacity;
 	transition-duration: 0.2s;
 	transition-timing-function: ease-out;

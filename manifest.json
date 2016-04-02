@@ -15,7 +15,8 @@
 		"topSites",
 		"management",
 		"tabs",
-		"http://query.yahooapis.com/",
+		"*://xml.weather.yahoo.com/*",
+		"*://query.yahooapis.com/*",
 		"fontSettings",
 		"sessions"
 	],

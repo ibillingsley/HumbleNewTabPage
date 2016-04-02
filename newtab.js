@@ -6,15 +6,16 @@ function render(node, target) {
 	var a = document.createElement('a');
 
 	var url = node.url || node.appLaunchUrl;
-	a.href = url || '#' + (node.title || node.name);
+	if (url) a.href = url;
 	a.innerText = node.title || node.name || '';
+	if (node.tooltip) a.title = node.tooltip;
 	setClass(a, node);
 
 	a.insertBefore(getIcon(node), a.firstChild);
 
 	if (node.action) {
 		a.onclick = function(event) {
-			return node.action();
+			return node.action(event);
 		};
 	} else if (url) {
 		var newtab = getConfig('newtab');
@@ -1219,48 +1220,14 @@ function refreshClosed() {
 	});
 }
 
-var geopos;
-// gets weather info from yahoo weather api using YQL
+// gets weather info from yahoo weather
 function getWeather(callback) {
-	var loc = getConfig('weather_location');
-	if (!geopos && !loc) {
-		// no location
-		callback([{ id: 'weather', title: 'Location unknown', children: true, icon: 'http://l.yimg.com/a/i/us/we/52/3200.gif' }]);
-		// try geolocation
-		if (navigator.geolocation) {
-			navigator.geolocation.getCurrentPosition(function(pos) {
-				geopos = pos.coords;
-				refreshWeather();
-			}, function(error) {
-				if (!getConfig('weather_location')) {
-					setConfig('show_weather', 0);
-					showConfig('show_weather');
-				}
-			});
-		}
-		return;
-	}
-
-	var query = 'select * from weather.forecast where u="' + getConfig('weather_units') +
-		'" and woeid in (select woeid from ' + ( geopos ? 'geo.placefinder' : 'geo.places' ) + ' where text="' +
-		( geopos ?
-			geopos.latitude + ' ' + geopos.longitude + '" and gflags="R" ' :
-			loc + '" '
-		) + 'and focus="" limit 1) limit 1';
-
-	var url = 'http://query.yahooapis.com/v1/public/yql?format=json&q=' + encodeURIComponent(query);
-
 	// check cache (15 minute expiry)
 	var cached = JSON.parse(localStorage.getItem('weather.cache'));
-	if (cached && new Date() - new Date(cached.date) < 1000*60*15) {
+	if (cached && new Date() - new Date(cached.date) < 1000 * 60 * 15) {
 		callback(cached.data);
 		return;
 	}
-
-	// show loading...
-	callback([{ id: 'weather', title: 'Loading weather...', children: true }]);
-	geopos = null;
-
 	var onerror = function(event) {
 		console.log(event);
 		var targets = document.getElementsByClassName('weather');
@@ -1269,66 +1236,90 @@ function getWeather(callback) {
 			targets[i].classList.add('error');
 		}
 	};
+	var locId = getConfig('weather_location_id');
+	if (!locId) {
+		var loc = getConfig('weather_location');
+		if (!loc) {
+			// no location
+			callback([{ id: 'weather', title: 'Location unknown', icon: 'http://l.yimg.com/a/i/us/we/52/3200.gif', action: function() {
+				location.hash = '#options';
+				document.getElementById('options_weather_location').focus();
+				return false;
+			} }]);
+			return;
+		}
+	}
+	// show cached (2 hours) or loading...
+	if (cached && new Date() - new Date(cached.date) < 1000 * 60 * 120) {
+		callback(cached.data);
+	} else {
+		callback([{ id: 'weather', title: 'Loading weather...', children: true }]);
+	}
 
-	// request weather data
+	if (locId) {
+		getForecast(locId, onerror);
+	} else {
+		getLocationId(loc, function(locId) {
+			getForecast(locId, onerror);
+		}, onerror);
+	}
+}
+
+function getForecast(locId, onerror) {
+	var url = 'http://xml.weather.yahoo.com/forecastrss?w=' + locId + '&u=' + getConfig('weather_units');
 	var request = new XMLHttpRequest();
-
 	request.onload = function(event) {
-		var nodes = [];
-		var response = request.response;
-		if (!response) {
-			onerror();
-			return;
-		}
-		response = JSON.parse(response);
-		// validate
-		if (!response || !response.query || !response.query.results) {
-			onerror(response);
-			return;
-		}
+		try {
+			var nodes = [];
+			var xml = (new DOMParser()).parseFromString(request.response, 'application/xml');
+			var xmlns = xml.documentElement.getAttribute('xmlns:yweather');
 
-		response = response.query.results.channel;
-		var current = response.item.condition;
-		var location = response.location;
-		if (!current || !location) {
-			onerror(response);
-			return;
-		}
+			// current conditions
+			var current = xml.getElementsByTagNameNS(xmlns, 'condition')[0];
+			var parentnode = {
+				id: 'weather',
+				title: current.getAttribute('temp') + '°' + (getConfig('weather_units') == 'c' ? 'C' : 'F') + ' ' + current.getAttribute('text'),
+				tooltip: xml.querySelector('item > title').textContent,
+				icon: 'http://l.yimg.com/a/i/us/we/52/' + current.getAttribute('code') + '.gif'
+			};
 
-		// correct location value
-		var city = location.city + (location.region ? ', ' + location.region : '') + ', ' + location.country;
-		if (city != getConfig('weather_location')) {
-			setConfig('weather_location', city);
-			showConfig('weather_location');
-			return;
+			// forecast
+			var forecast = xml.getElementsByTagNameNS(xmlns, 'forecast');
+			for (var i = 0; i < forecast.length; i++) {
+				nodes.push({
+					title: forecast[i].getAttribute('day') + ' ' +
+						forecast[i].getAttribute('high') + '°, ' +
+						forecast[i].getAttribute('low') + '° ' +
+						forecast[i].getAttribute('text'),
+					icon: 'http://l.yimg.com/a/i/us/we/52/' + forecast[i].getAttribute('code') + '.gif'
+				});
+			}
+			parentnode.children = nodes;
+			refreshWeather([parentnode], url);
+		} catch (e) {
+			onerror(e);
 		}
-
-		// current conditions
-		var parentnode = {
-			id: 'weather',
-			title: current.temp + '°' + (getConfig('weather_units') == 'c' ? 'C' : 'F') + ' ' + current.text,
-			icon: 'http://l.yimg.com/a/i/us/we/52/' + current.code + '.gif'
-		};
-
-		// forecast
-		var forecast = response.item.forecast;
-		for (var i = 0; i < forecast.length; i++) {
-			nodes.push({
-				title: forecast[i].day + ' ' +
-					forecast[i].high + '° | ' +
-					forecast[i].low + '° ' +
-					forecast[i].text,
-				icon: 'http://l.yimg.com/a/i/us/we/52/' + forecast[i].code + '.gif'
-			});
-		}
-		parentnode.children = nodes;
-		refreshWeather([parentnode], url);
 	};
-
-	request.onabort = onerror;
 	request.onerror = onerror;
-	request.ontimeout = onerror;
+	request.open('GET', url, true);
+	request.send();
+}
 
+function getLocationId(text, callback, onerror) {
+	var query = 'select woeid from geo.places where text="' + text + '" and focus="" limit 1';
+	var url = 'https://query.yahooapis.com/v1/public/yql?format=json&q=' + encodeURIComponent(query);
+	var request = new XMLHttpRequest();
+	request.onload = function() {
+		var response = JSON.parse(request.response);
+		if (response && response.query && response.query.results && response.query.results.place && response.query.results.place.woeid) {
+			var woeid = response.query.results.place.woeid;
+			setConfig('weather_location_id', woeid);
+			callback(woeid);
+		} else {
+			onerror(response);
+		}
+	};
+	request.onerror = onerror;
 	request.open('GET', url + '&' + Date.now(), true);
 	request.send();
 }
@@ -1381,6 +1372,7 @@ var config = {
 	hide_options: 0,
 	lock: 0,
 	weather_location: '',
+	weather_location_id: '',
 	weather_units: 'c',
 	show_top: 1,
 	show_apps: 1,
@@ -1510,7 +1502,10 @@ function setConfig(key, value) {
 			}
 		}
 	} else if (key.substring(0, 7) == 'weather') {
-		refreshWeather();
+		if (key == 'weather_location')
+			setConfig('weather_location_id', null);
+		else
+			refreshWeather();
 	} else if (key.substring(0,4) == 'show') {
 		var id = key.substring(5);
 		if (!value) {
@@ -1647,10 +1642,12 @@ function onChange(key, value) {
 
 	// show/hide default button
 	var input = document.getElementById('options_' + key);
-	var isDefault = value == (theme.hasOwnProperty(key) ? theme[key] : config[key]);
-	input.reset.style.visibility = (isDefault ? 'hidden' : null);
-	if (input.swatch)
-		input.swatch.value = value;
+	if (input) {
+		var isDefault = value == (theme.hasOwnProperty(key) ? theme[key] : config[key]);
+		input.reset.style.visibility = (isDefault ? 'hidden' : null);
+		if (input.swatch)
+			input.swatch.value = value;
+	}
 }
 
 // loads config settings
@@ -1668,7 +1665,7 @@ function loadSettings() {
 // apply config values to input controls
 function showConfig(key) {
 	var input = document.getElementById('options_' + key);
-	if (input.type === 'file')
+	if (!input || input.type === 'file')
 		return;
 
 	input[input.type === 'checkbox' ? 'checked' : 'value'] = getConfig(key);
@@ -1677,6 +1674,9 @@ function showConfig(key) {
 // initialize config settings
 function initConfig(key) {
 	var input = document.getElementById('options_' + key);
+	if (!input)
+		return;
+
 	if (input.type == 'color') {
 		input.type = 'text';
 		input.className = 'color';
