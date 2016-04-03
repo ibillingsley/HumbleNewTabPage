@@ -33,6 +33,11 @@ This project is licensed under the **MIT License**, see [LICENSE_MIT.txt](LICENS
 Changelog
 ---------
 
+### Version 1.18 - April 3, 2016
+
+- Removed geolocation
+- Fixed weather error
+
 ### Version 1.17 - January 24, 2016
 
 - Fixed weather error
