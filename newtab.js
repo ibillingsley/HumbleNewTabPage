@@ -1222,9 +1222,9 @@ function refreshClosed() {
 
 // gets weather info from yahoo weather
 function getWeather(callback) {
-	// check cache (15 minute expiry)
+	// check cache (30 minute expiry)
 	var cached = JSON.parse(localStorage.getItem('weather.cache'));
-	if (cached && new Date() - new Date(cached.date) < 1000 * 60 * 15) {
+	if (cached && new Date() - new Date(cached.date) < 1000 * 60 * 30) {
 		callback(cached.data);
 		return;
 	}
@@ -1266,32 +1266,32 @@ function getWeather(callback) {
 }
 
 function getForecast(locId, onerror) {
-	var url = 'http://xml.weather.yahoo.com/forecastrss?w=' + locId + '&u=' + getConfig('weather_units');
+	var query = 'select * from weather.forecast where woeid="' + locId + '" and u="' + getConfig('weather_units') + '" limit 1';
+	var url = 'http://query.yahooapis.com/v1/public/yql?format=json&q=' + encodeURIComponent(query);
 	var request = new XMLHttpRequest();
 	request.onload = function(event) {
 		try {
 			var nodes = [];
-			var xml = (new DOMParser()).parseFromString(request.response, 'application/xml');
-			var xmlns = xml.documentElement.getAttribute('xmlns:yweather');
+			var response = JSON.parse(request.response).query.results.channel;
 
 			// current conditions
-			var current = xml.getElementsByTagNameNS(xmlns, 'condition')[0];
+			var current = response.item.condition;
 			var parentnode = {
 				id: 'weather',
-				title: current.getAttribute('temp') + '°' + (getConfig('weather_units') == 'c' ? 'C' : 'F') + ' ' + current.getAttribute('text'),
-				tooltip: xml.querySelector('item > title').textContent,
-				icon: 'http://l.yimg.com/a/i/us/we/52/' + current.getAttribute('code') + '.gif'
+				title: current.temp + '°' + (getConfig('weather_units') == 'c' ? 'C' : 'F') + ' ' + current.text,
+				tooltip: response.item.title,
+				icon: 'http://l.yimg.com/a/i/us/we/52/' + current.code + '.gif'
 			};
 
 			// forecast
-			var forecast = xml.getElementsByTagNameNS(xmlns, 'forecast');
-			for (var i = 0; i < forecast.length; i++) {
+			var forecast = response.item.forecast;
+			for (var i = 0; i < forecast.length && i < 5; i++) {
 				nodes.push({
-					title: forecast[i].getAttribute('day') + ' ' +
-						forecast[i].getAttribute('high') + '°, ' +
-						forecast[i].getAttribute('low') + '° ' +
-						forecast[i].getAttribute('text'),
-					icon: 'http://l.yimg.com/a/i/us/we/52/' + forecast[i].getAttribute('code') + '.gif'
+					title: forecast[i].day + ' ' +
+						forecast[i].high + '°, ' +
+						forecast[i].low + '° ' +
+						forecast[i].text,
+					icon: 'http://l.yimg.com/a/i/us/we/52/' + forecast[i].code + '.gif'
 				});
 			}
 			parentnode.children = nodes;
@@ -1301,7 +1301,7 @@ function getForecast(locId, onerror) {
 		}
 	};
 	request.onerror = onerror;
-	request.open('GET', url, true);
+	request.open('GET', url + '&' + Date.now(), true);
 	request.send();
 }
 
