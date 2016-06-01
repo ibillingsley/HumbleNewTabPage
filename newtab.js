@@ -1770,9 +1770,15 @@ function initSettings() {
 			if (index === nav.children.length-2) {
 				var exports = document.getElementById('options_export');
 				var imports = document.getElementById('options_import');
-				exports.value = JSON.stringify(localStorage);
+				var replacer = function(key, value) {
+					if (key == 'options.background_image_file' || key == 'weather.cache') {
+						return undefined;
+					}
+					return value;
+				};
+				exports.value = JSON.stringify(localStorage, replacer);
 				imports.value = '';
-				imports.placeholder = 'Paste here exported settings.'
+				imports.placeholder = 'Paste exported settings here';
 				imports.onchange = function() {
 					try {
 						var imported = JSON.parse(imports.value);
@@ -1781,14 +1787,14 @@ function initSettings() {
 						}
 						imports.value = '';
 						imports.placeholder = 'Import successful!';
-						exports.value = JSON.stringify(localStorage);
+						exports.value = JSON.stringify(localStorage, replacer);
 						loadSettings();
 						loadColumns();
 					} catch (e) {
 						imports.value = '';
 						imports.placeholder = 'Import error! Please check if your settings are valid JSON.';
 					}
-				}
+				};
 			}
 			return false;
 		};
