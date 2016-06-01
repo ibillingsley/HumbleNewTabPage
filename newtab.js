@@ -1756,13 +1756,37 @@ function initSettings() {
 			nav.children[index].firstChild.classList.add('current');
 			options.getElementsByClassName('section')[index].classList.add('current');
 			// show custom css on advanced tab
-			if (index == nav.children.length-1) {
+			if (index === nav.children.length-2) {
 				var allcss = document.getElementById('all_css');
 				allcss.value = '';
 				for (var key in config) {
 					var css = (getStyle(key, getConfig(key)));
 					if (css && css.length < 1000 && key != 'css')
 						allcss.value +=  css + '\n';
+				}
+			}
+			// import/export
+			if (index === nav.children.length-1) {
+				var exports = document.getElementById('options_export');
+				var imports = document.getElementById('options_import');
+				exports.value = JSON.stringify(localStorage);
+				imports.value = '';
+				imports.placeholder = 'Paste here exported settings.'
+				imports.onchange = function() {
+					try {
+						var imported = JSON.parse(imports.value);
+						for(var key in imported) {
+							localStorage.setItem(key, imported[key]);
+						}
+						imports.value = '';
+						imports.placeholder = 'Import successful!';
+						exports.value = JSON.stringify(localStorage);
+						loadSettings();
+						loadColumns();
+					} catch (e) {
+						imports.value = '';
+						imports.placeholder = 'Import error! Please check if your settings are valid JSON.';
+					}
 				}
 			}
 			return false;
