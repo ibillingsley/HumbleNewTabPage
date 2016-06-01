@@ -1146,9 +1146,10 @@ function getApps(callback) {
 
 // get recently closed tabs
 function getClosed(callback) {
-	chrome.sessions.getRecentlyClosed({ maxResults: getConfig('number_closed') }, function(sessions) {
+	var maxResults = getConfig('number_closed');
+	chrome.sessions.getRecentlyClosed({ maxResults: maxResults }, function(sessions) {
 		var nodes = [];
-		for (var i = 0; i < sessions.length; i++) {
+		for (var i = 0; i < sessions.length && i < maxResults; i++) {
 			(function(session) {
 				if (session.window && session.window.tabs.length == 1)
 					session.tab = session.window.tabs[0];
