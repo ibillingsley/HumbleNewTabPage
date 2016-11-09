@@ -817,24 +817,29 @@ function setClass(target, node, isopen) {
 
 // gets best icon for a node
 function getIcon(node) {
-	var url = null;
+	var url = null,
+		url2x = null;
 	if (node.icons) {
 		var size;
 		for (var i in node.icons) {
 			var iconInfo = node.icons[i];
 			if (iconInfo.url && (!size || (iconInfo.size < size && iconInfo.size > 15))) {
 				url = iconInfo.url;
+				if (iconInfo.size > 31) url2x = iconInfo.url;
 				size = iconInfo.size;
 			}
 		}
 	} else if (node.icon)
 		url = node.icon;
-	else if (node.url || node.appLaunchUrl)
+	else if (node.url || node.appLaunchUrl) {
 		url = 'chrome://favicon/' + (node.url || node.appLaunchUrl);
+		url2x = 'chrome://favicon/size/16@2x/' + (node.url || node.appLaunchUrl);
+	}
 
 	var icon = document.createElement(url ? 'img' : 'div');
 	icon.className = 'icon';
 	icon.src = url;
+	if (url2x) icon.srcset = url2x + ' 2x';
 	icon.alt = '';
 	return icon;
 }
