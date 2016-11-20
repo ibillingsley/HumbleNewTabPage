@@ -33,6 +33,11 @@ This project is licensed under the **MIT License**, see [LICENSE_MIT.txt](LICENS
 Changelog
 ---------
 
+### Version 1.21 - November 20, 2016
+
+- Added HiDPI icons
+- Fixed export settings not selectable
+
 ### Version 1.20 - June 1, 2016
 
 - Added import/export settings
