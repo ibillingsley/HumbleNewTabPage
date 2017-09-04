@@ -4,7 +4,7 @@
 	"minimum_chrome_version": "37",
 	"applications": {
 		"gecko": {
-			"strict_min_version": "57.0a1"
+			"strict_min_version": "55"
 		}
 	},
 	"manifest_version": 2,
