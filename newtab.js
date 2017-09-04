@@ -1177,7 +1177,7 @@ function getClosed(callback) {
 }
 
 function getDevices(callback) {
-	chrome.sessions.getDevices({ maxResults: getConfig('number_closed') }, function(devices) {
+  chrome.sessions.getDevices && chrome.sessions.getDevices({ maxResults: getConfig('number_closed') }, function(devices) {
 		var nodes = [];
 		for (var i = 0; i < devices.length; i++) {
 			(function(device) {
