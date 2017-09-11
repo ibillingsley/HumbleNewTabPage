@@ -832,8 +832,21 @@ function getIcon(node) {
 	} else if (node.icon)
 		url = node.icon;
 	else if (node.url || node.appLaunchUrl) {
-		url = 'chrome://favicon/' + (node.url || node.appLaunchUrl);
-		url2x = 'chrome://favicon/size/16@2x/' + (node.url || node.appLaunchUrl);
+
+		if(hasFaviconAPI)
+		{
+      url = 'chrome://favicon/' + (node.url || node.appLaunchUrl);
+      url2x = 'chrome://favicon/size/16@2x/' + (node.url || node.appLaunchUrl);
+		}
+		else
+		{
+			try {
+				var domain = ('' + (node.url || node.appLaunchUrl)).match(/:\/\/(.[^/]+)/);
+        if(domain)
+        	url = url2x = 'https://s2.googleusercontent.com/s2/favicons?domain_url=' + domain[1];
+      }
+      catch(err) { console.error(err) }
+    }
 	}
 
 	var icon = document.createElement(url ? 'img' : 'div');
@@ -1177,7 +1190,7 @@ function getClosed(callback) {
 }
 
 function getDevices(callback) {
-	chrome.sessions.getDevices({ maxResults: getConfig('number_closed') }, function(devices) {
+  chrome.sessions.getDevices && chrome.sessions.getDevices({ maxResults: getConfig('number_closed') }, function(devices) {
 		var nodes = [];
 		for (var i = 0; i < devices.length; i++) {
 			(function(device) {
@@ -1876,8 +1889,22 @@ function initSettings() {
 	});
 }
 
+var hasFaviconAPI;
+
+function determineFaviconMethod()
+{
+  if(window.browser) browser.permissions.getAll().then(setFlag);
+  else chrome.permissions.getAll(setFlag);
+
+  function setFlag(p) {
+		hasFaviconAPI = p.permissions.includes('chrome://favicon/')
+	}
+}
+
+
 // initialize page
 loadSettings();
+determineFaviconMethod();
 loadColumns();
 
 // fix scrollbar jump
