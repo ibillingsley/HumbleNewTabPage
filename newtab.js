@@ -2,10 +2,15 @@
 
 // render a single bookmark node
 function render(node, target) {
+	if (node.type == 'separator' || node.url && node.url.startsWith('place:')) {
+		console.warn('skipping: ', node);
+		return;
+	}
+
 	var li = document.createElement('li');
 	var a = document.createElement('a');
 
-	var url = node.url || node.appLaunchUrl;
+	var url = node.url;
 	if (url) a.href = url;
 	a.innerText = node.title || node.name || '';
 	if (node.tooltip) a.title = node.tooltip;
@@ -59,8 +64,7 @@ function render(node, target) {
 		addFolderHandlers(node, a);
 		enableDragFolder(node, a);
 
-	} else if (node.type)
-		addAppHandlers(node, a);
+	}
 
 	target.appendChild(li);
 	return li;
@@ -206,136 +210,6 @@ function addFolderHandlers(node, a) {
 	};
 }
 
-// enables click and context menu for given app
-function addAppHandlers(node, a) {
-	if (!node.appLaunchUrl && node.id) {
-		a.onclick = function() {
-			chrome.management.launchApp(node.id);
-			return false;
-		};
-	}
-	a.oncontextmenu = function (event) {
-		var menuItems = [];
-
-		if (node.appLaunchUrl) {
-			menuItems.push({
-				label: 'Open in new tab',
-				action: function () {
-					openLink(node, 1);
-				}
-			});
-		}
-		if (node.optionsUrl) {
-			menuItems.push({
-				label: 'Options',
-				action: function () {
-					window.location = node.optionsUrl;
-				}
-			});
-		}
-		if (node.homepageUrl) {
-			menuItems.push({
-				label: 'Open in Web Store',
-				action: function () {
-					window.location = node.homepageUrl;
-				}
-			});
-		}
-		if (node.mayDisable) {
-			menuItems.push({
-				label: 'Uninstall',
-				action: function () {
-					if (confirm('Uninstall "' + a.innerText + '"?'))
-						chrome.management.uninstall(node.id, chrome.tabs.reload);
-				}
-			});
-		}
-
-		if (menuItems.length) {
-			renderMenu(menuItems, event.pageX, event.pageY);
-			return false;
-		}
-	};
-
-	// enable drag and drop ordering of app. TODO refactor
-	a.draggable = true;
-	a.ondragstart = function(event) {
-		dragIds = [node.id];
-		event.stopPropagation();
-		event.dataTransfer.effectAllowed = 'move copy';
-		this.classList.add('dragstart');
-	};
-	a.ondragend = function(event) {
-		dragIds = null;
-		this.classList.remove('dragstart');
-		clearDropTarget();
-	};
-	var li = a.parentNode;
-	li.ondragover = function(event) {
-		event.preventDefault();
-		event.stopPropagation();
-		event.dataTransfer.dropEffect = 'move';
-		// highlight drop target
-		var target = event.target;
-		while (target && target.tagName != 'A')
-			target = target.parentNode;
-
-		if (target) {
-			clearDropTarget();
-			dropTarget = target;
-			var bordercss = 'solid 2px ' + getConfig('font_color');
-			if (isAbove(event.pageY, target)) {
-				target.style.borderBottom = bordercss;
-				target.style.margin = '0 0 -2px 0';
-			} else {
-				target.style.borderTop = bordercss;
-				target.style.margin = '-2px 0 0 0';
-			}
-		}
-		return false;
-	};
-
-	li.ondragleave = function(event) {
-		clearDropTarget();
-	};
-
-	li.ondrop = function(event) {
-		event.stopPropagation();
-
-		var target = event.target;
-		while (target && target.tagName != 'A')
-			target = target.parentNode;
-
-		if (!target)
-			return false;
-
-		// saves app order to local storage
-		var index = appsOrder.indexOf(node.id);
-		var oldIndex = appsOrder.indexOf(dragIds[0]);
-		if (index == -1 || oldIndex == -1)
-			return false;
-
-		if (isAbove(event.pageY, target))
-			index++;
-
-		if (oldIndex < index)
-			index--;
-
-		appsOrder.splice(oldIndex, 1);
-		appsOrder.splice(index, 0, dragIds[0]);
-
-		localStorage.setItem('apps.order', JSON.stringify(appsOrder));
-
-		// refresh
-		var parent = li.parentNode.parentNode;
-		parent.removeChild(li.parentNode);
-		getChildrenFunction({id: 'apps'})(function(result) {
-			renderAll(result, parent);
-		});
-		return false;
-	};
-}
-
 // enables context menu for given column
 function addColumnHandlers(index, ul) {
 	var items = [];
@@ -410,34 +284,6 @@ function getMenuItems(node) {
 			label: 'Open all links in folder',
 			action: function() {
 				openLinks(node);
-			}
-		});
-	if (node.id == 'closed')
-		items.push({
-			label: 'Clear browsing data',
-			action: function() {
-				openLink({ url: 'chrome://settings/clearBrowserData' }, 1);
-			}
-		});
-	if (node.id == 'apps')
-		items.push({
-			label: 'Manage apps',
-			action: function() {
-				openLink({ url: 'chrome://apps' }, 1);
-			}
-		});
-	if (node.id == 'devices')
-		items.push({
-			label: 'History',
-			action: function() {
-				openLink({ url: 'chrome://history' }, 1);
-			}
-		});
-	if (Number(node.id))
-		items.push({
-			label: 'Edit bookmarks',
-			action: function() {
-				openLink({ url: 'chrome://bookmarks/#' + node.id }, 1);
 			}
 		});
 	return items;
@@ -701,12 +547,6 @@ function getChildrenFunction(node) {
 				else
 					callback([]);
 			};
-		case 'apps':
-			return function(callback) {
-				getApps(function(result) {
-					callback(result);
-				});
-			};
 		case 'recent':
 			return function(callback) {
 				chrome.bookmarks.getRecent(getConfig('number_recent'), function(result) {
@@ -716,12 +556,6 @@ function getChildrenFunction(node) {
 		case 'closed':
 			return function(callback) {
 				getClosed(function(result) {
-					callback(result);
-				});
-			};
-		case 'devices':
-			return function(callback) {
-				getDevices(function(result) {
 					callback(result);
 				});
 			};
@@ -762,17 +596,11 @@ function getSubTree(id, callback) {
 		case 'top':
 			callback([{ title: 'Most visited', id: 'top', children: true}]);
 			break;
-		case 'apps':
-			callback([{ title: 'Apps', id: 'apps', children: true }]);
-			break;
 		case 'recent':
 			callback([{ title: 'Recent bookmarks', id: 'recent', children: true }]);
 			break;
 		case 'closed':
 			callback([{ title: 'Recently closed', id: 'closed', children: true }]);
-			break;
-		case 'devices':
-			callback([{ title: 'Other devices', id: 'devices', children: true }]);
 			break;
 		case 'weather':
 			getWeather(function(result) {
@@ -805,10 +633,8 @@ function setClass(target, node, isopen) {
 
 	switch(node.id) {
 		case 'top':
-		case 'apps':
 		case 'recent':
 		case 'closed':
-		case 'devices':
 		case 'weather':
 		case 'empty':
 			target.classList.add(node.id);
@@ -831,24 +657,21 @@ function getIcon(node) {
 		}
 	} else if (node.icon)
 		url = node.icon;
-	else if (node.url || node.appLaunchUrl) {
-
-		if(hasFaviconAPI)
-		{
-      url = 'chrome://favicon/' + (node.url || node.appLaunchUrl);
-      url2x = 'chrome://favicon/size/16@2x/' + (node.url || node.appLaunchUrl);
+	else if (node.url) {
+		if (hasFaviconAPI) {
+			url = 'chrome://favicon/' + node.url;
+			url2x = 'chrome://favicon/size/16@2x/' + node.url;
 		}
-		else
-		{
+		else {
 			try {
-				var domain = ('' + (node.url || node.appLaunchUrl)).match(/:\/\/(.[^/]+)/);
-        if(domain)
-        	url = url2x = 'https://s2.googleusercontent.com/s2/favicons?domain_url=' + domain[1];
-      }
-      catch(err) { console.error(err) }
-    }
+				var domain = ('' + node.url).match(/:\/\/(.[^/]+)/);
+				if (domain)
+					url = url2x = 'https://s2.googleusercontent.com/s2/favicons?domain_url=' + domain[1];
+			} catch (err) {
+				console.error(err);
+			}
+		}
 	}
-
 	var icon = document.createElement(url ? 'img' : 'div');
 	icon.className = 'icon';
 	icon.src = url;
@@ -950,7 +773,7 @@ function openLinks(node) {
 
 // opens given node
 function openLink(node, newtab) {
-	var url = node.url || node.appLaunchUrl;
+	var url = node.url;
 	if (url) {
 		chrome.tabs.getCurrent(function(tab) {
 			if (newtab)
@@ -964,7 +787,7 @@ function openLink(node, newtab) {
 var columns; // columns[x][y] = id
 var root; // root[] = id
 var coords; // coords[id] = {x:x, y:y}
-var special = ['top', 'apps', 'recent', 'weather', 'closed', 'devices'];
+var special = ['top', 'recent', 'weather', 'closed'];
 
 // ensure root folders are included
 function verifyColumns() {
@@ -1121,47 +944,6 @@ function removeRow(xpos, ypos) {
 	saveColumns();
 }
 
-var appsOrder;
-
-// gets apps
-function getApps(callback) {
-	chrome.management.getAll(function(result) {
-		result = result.filter(function(a) {
-			return a.enabled && a.type !== 'extension' && a.type !== 'theme' && a.isApp !== false &&
-				a.id !== 'nmmhkkegccagdldgiimedpiccmgmieda';// hide "Google Wallet Service"
-		});
-
-		result.push({
-			id: 'webstore',
-			name: 'Chrome Web Store',
-			appLaunchUrl: 'https://chrome.google.com/webstore',
-			icon: 'https://www.google.com/images/icons/product/chrome_web_store-32.png',
-			type: 'hosted_app'
-		});
-
-		// order apps
-		var order = appsOrder || JSON.parse(localStorage.getItem('apps.order')) || [];
-
-		result.sort(function (a, b) {
-			var diff = order.indexOf(a.id) - order.indexOf(b.id);
-			if (diff)
-				return diff;
-			else if (a.name < b.name)
-				return -1;
-			else if (a.name > b.name)
-				return 1;
-			else
-				return 0;
-		});
-
-		appsOrder = [];
-		for (var i = 0; i < result.length; i++)
-			appsOrder.push(result[i].id);
-
-		callback(result);
-	});
-}
-
 // get recently closed tabs
 function getClosed(callback) {
 	var maxResults = getConfig('number_closed');
@@ -1184,33 +966,6 @@ function getClosed(callback) {
 					}
 				});
 			})(sessions[i]);
-		}
-		callback(nodes);
-	});
-}
-
-function getDevices(callback) {
-  chrome.sessions.getDevices && chrome.sessions.getDevices({ maxResults: getConfig('number_closed') }, function(devices) {
-		var nodes = [];
-		for (var i = 0; i < devices.length; i++) {
-			(function(device) {
-				var children = [];
-				for (var j = 0; j < device.sessions.length; j++) {
-					var session = device.sessions[j];
-					var tabs = session.window ? session.window.tabs : [session.tab];
-					for (var k = 0; k < tabs.length; k++) {
-						children.push({
-							title: tabs[k].title,
-							url: tabs[k].url
-						});
-					}
-				}
-				nodes.push({
-					id: 'device.' + device.deviceName,
-					title: device.deviceName,
-					children: children
-				});
-			})(devices[i]);
 		}
 		callback(nodes);
 	});
@@ -1394,11 +1149,9 @@ var config = {
 	weather_location_id: '',
 	weather_units: 'c',
 	show_top: 1,
-	show_apps: 1,
 	show_recent: 1,
 	show_weather: 1,
 	show_closed: 1,
-	show_devices: 1,
 	show_root: 0,
 	newtab: 0,
 	auto_close: 0,
@@ -1891,16 +1644,16 @@ function initSettings() {
 
 var hasFaviconAPI;
 
-function determineFaviconMethod()
-{
-  if(window.browser) browser.permissions.getAll().then(setFlag);
-  else chrome.permissions.getAll(setFlag);
+function determineFaviconMethod() {
+	if (window.browser)
+		browser.permissions.getAll().then(setFlag);
+	else
+		chrome.permissions.getAll(setFlag);
 
-  function setFlag(p) {
-		hasFaviconAPI = p.permissions.includes('chrome://favicon/')
+	function setFlag(p) {
+		hasFaviconAPI = p.permissions.includes('chrome://favicon/');
 	}
 }
-
 
 // initialize page
 loadSettings();
