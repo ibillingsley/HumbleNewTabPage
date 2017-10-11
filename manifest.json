@@ -16,22 +16,15 @@
 	},
 	"permissions": [
 		"bookmarks",
-		"chrome://favicon/",
 		"topSites",
 		"management",
 		"tabs",
-		"fontSettings",
 		"sessions"
 	],
 	"chrome_url_overrides":
 	{
 		"newtab": "newtab.html"
 	},
-	"background" : {
-		"scripts" : ["background.js"],
-		"persistent" : true
-	},
-	"options_page": "newtab.html#options",
 	"options_ui": {
 		"page": "newtab.html#options",
 		"chrome_style": false,
