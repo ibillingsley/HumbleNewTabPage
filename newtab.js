@@ -367,6 +367,7 @@ function enableDragColumn(id, column) {
 
 	column.ondragstart = function(event) {
 		dragIds = columns[id];
+		event.dataTransfer.setData('text/plain', JSON.stringify(dragIds));
 		event.dataTransfer.effectAllowed = 'move';
 		this.classList.add('dragstart');
 	};
@@ -388,6 +389,7 @@ function enableDragFolder(node, a) {
 	a.ondragstart = function(event) {
 		dragIds = [node.id];
 		event.stopPropagation();
+		event.dataTransfer.setData('text/plain', JSON.stringify(dragIds));
 		event.dataTransfer.effectAllowed = 'move copy';
 		this.classList.add('dragstart');
 	};
