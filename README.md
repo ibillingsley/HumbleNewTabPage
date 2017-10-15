@@ -11,7 +11,9 @@ Redesigned new tab page featuring your bookmarks, apps, most visited, recently c
 - Highly customizable
 - Fast loading and lightweight
 
-[Get it in the Chrome Web Store](https://chrome.google.com/webstore/detail/mfgdmpfihlmdekaclngibpjhdebndhdj)
+[Download for Chrome](https://chrome.google.com/webstore/detail/mfgdmpfihlmdekaclngibpjhdebndhdj)
+
+[Download for Firefox](https://addons.mozilla.org/en-US/firefox/addon/humble-new-tab/)
 
 This extension replaces the default new tab page. Drag and drop folders to create new columns or reorder them. The font, colors, spacing, and more can be customized from the options menu.
 
@@ -32,6 +34,10 @@ This project is licensed under the **MIT License**, see [LICENSE_MIT.txt](LICENS
 
 Changelog
 ---------
+
+### Version 1.22 - October 15, 2017
+
+- Firefox support
 
 ### Version 1.21 - November 20, 2016
 
