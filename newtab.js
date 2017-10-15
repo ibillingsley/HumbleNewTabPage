@@ -30,9 +30,7 @@ function render(node, target) {
 		} else if (newtab == 2) {
 			// new background tab
 			a.onclick = function(event) {
-				chrome.tabs.getCurrent(function(tab) {
-					chrome.tabs.create({url: url, active: false, openerTabId: tab.id});
-				});
+				chrome.tabs.create({url: url, active: false});
 				return false;
 			};
 		}
@@ -544,6 +542,9 @@ function getChildrenFunction(node) {
 			return function(callback) {
 				if (chrome.topSites)
 					chrome.topSites.get(function(result) {
+						result = result.filter(function(node) {
+							return node.url && !node.url.startsWith(location.origin);
+						});
 						callback(result.slice(0, getConfig('number_top')));
 					});
 				else
@@ -779,7 +780,7 @@ function openLink(node, newtab) {
 	if (url) {
 		chrome.tabs.getCurrent(function(tab) {
 			if (newtab)
-				chrome.tabs.create({url: url, active: (newtab == 1), openerTabId: tab.id});
+				chrome.tabs.create({url: url, active: (newtab == 1)});
 			else
 				chrome.tabs.update(tab.id, {url: url});
 		});
@@ -949,24 +950,25 @@ function removeRow(xpos, ypos) {
 // get recently closed tabs
 function getClosed(callback) {
 	var maxResults = getConfig('number_closed');
-	chrome.sessions.getRecentlyClosed({ maxResults: maxResults }, function(sessions) {
+	chrome.sessions.getRecentlyClosed({}, function(sessions) {
 		var nodes = [];
-		for (var i = 0; i < sessions.length && i < maxResults; i++) {
+		for (var i = 0; i < sessions.length && nodes.length < maxResults; i++) {
 			(function(session) {
 				if (session.window && session.window.tabs.length == 1)
 					session.tab = session.window.tabs[0];
 
-				nodes.push({
-					title: session.tab ? session.tab.title : session.window.tabs.length + ' Tabs',
-					url: session.tab ? session.tab.url : null,
-					className: session.window ? 'window' : null,
-					action: function() {
-						chrome.sessions.restore(session.window ? session.window.sessionId : session.tab.sessionId, function(session) {
-							refreshClosed();
-						});
-						return false;
-					}
-				});
+				if (!session.tab || session.tab.url && !session.tab.url.startsWith(location.origin))
+					nodes.push({
+						title: session.tab ? session.tab.title : session.window.tabs.length + ' Tabs',
+						url: session.tab ? session.tab.url : null,
+						className: session.window ? 'window' : null,
+						action: function() {
+							chrome.sessions.restore(session.window ? session.window.sessionId : session.tab.sessionId, function(session) {
+								refreshClosed();
+							});
+							return false;
+						}
+					});
 			})(sessions[i]);
 		}
 		callback(nodes);
