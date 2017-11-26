@@ -8,7 +8,7 @@ function render(node, target) {
 	var url = node.url || node.appLaunchUrl;
 	if (url) a.href = url;
 	a.innerText = node.title || node.name || '';
-	if (node.tooltip) a.title = node.tooltip;
+	if (node.tooltip) {a.title = node.tooltip} else {a.title = node.title};
 	setClass(a, node);
 
 	a.insertBefore(getIcon(node), a.firstChild);
