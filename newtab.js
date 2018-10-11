@@ -437,7 +437,7 @@ function getMenuItems(node) {
 		items.push({
 			label: 'Edit bookmarks',
 			action: function() {
-				openLink({ url: 'chrome://bookmarks/#' + node.id }, 1);
+				openLink({ url: 'chrome://bookmarks/?id=' + node.id }, 1);
 			}
 		});
 	return items;
