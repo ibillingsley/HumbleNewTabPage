@@ -644,6 +644,7 @@ function setClass(target, node, isopen) {
 	}
 }
 
+var iconProvider = 1;
 // gets best icon for a node
 function getIcon(node) {
 	var url = null,
@@ -661,17 +662,17 @@ function getIcon(node) {
 	} else if (node.icon)
 		url = node.icon;
 	else if (node.url) {
-		if (hasFaviconAPI) {
-			url = 'chrome://favicon/' + node.url;
-			url2x = 'chrome://favicon/size/16@2x/' + node.url;
-		}
-		else {
-			try {
-				var domain = ('' + node.url).match(/:\/\/(.[^/]+)/);
-				if (domain)
-					url = url2x = 'https://s2.googleusercontent.com/s2/favicons?domain_url=' + domain[1];
-			} catch (err) {
-				console.error(err);
+		var domain = ('' + node.url).match(/:\/\/\/?([^/]+)/);
+		if (domain) {
+			if (iconProvider == 1) {
+				url = node.url.substring(0, domain.index + domain[0].length) + '/favicon.ico';
+			} else if (iconProvider == 2) {
+				url = 'https://s2.googleusercontent.com/s2/favicons?domain_url=' + domain[1];
+			} else if (iconProvider == 3) {
+				url = 'https://api.faviconkit.com/' + domain[1] + '/16';
+				url2x = 'https://api.faviconkit.com/' + domain[1] + '/32';
+			} else {
+				return document.createElement('div');
 			}
 		}
 	}
@@ -1163,7 +1164,8 @@ var config = {
 	css: '',
 	number_top: 20,
 	number_closed: 10,
-	number_recent: 10
+	number_recent: 10,
+	icon_provider: 1
 };
 
 // color theme values
@@ -1267,7 +1269,7 @@ function setConfig(key, value) {
 		value = (theme.hasOwnProperty(key) ? theme[key] : config[key]);
 	}
 	// special case settings
-	if (key == 'lock' || key == 'newtab' || key == 'show_root' || key.substring(0,6) == 'number')
+	if (key == 'lock' || key == 'newtab' || key == 'show_root' || key == 'icon_provider' || key.substring(0,6) == 'number')
 		loadColumns();
 	else if (key == 'theme') {
 		theme = themes[value];
@@ -1410,6 +1412,8 @@ function onChange(key, value) {
 	else if (key == 'auto_scale') {
 		onChange('width');
 		onChange('v_margin');
+	} else if (key == 'icon_provider') {
+		iconProvider = value;
 	}
 
 	// update options panel
@@ -1646,22 +1650,8 @@ function initSettings() {
 	});
 }
 
-var hasFaviconAPI;
-
-function determineFaviconMethod() {
-	if (window.browser)
-		browser.permissions.getAll().then(setFlag);
-	else
-		chrome.permissions.getAll(setFlag);
-
-	function setFlag(p) {
-		hasFaviconAPI = p.permissions.includes('chrome://favicon/');
-	}
-}
-
 // initialize page
 loadSettings();
-determineFaviconMethod();
 loadColumns();
 
 // fix scrollbar jump
