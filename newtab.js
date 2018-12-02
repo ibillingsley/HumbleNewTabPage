@@ -1273,7 +1273,7 @@ function getWeather(callback) {
 
 function getForecast(locId, onerror) {
 	var query = 'select * from weather.forecast where woeid="' + locId + '" and u="' + getConfig('weather_units') + '" limit 1';
-	var url = 'http://query.yahooapis.com/v1/public/yql?format=json&q=' + encodeURIComponent(query);
+	var url = 'https://query.yahooapis.com/v1/public/yql?format=json&q=' + encodeURIComponent(query);
 	var request = new XMLHttpRequest();
 	request.onload = function(event) {
 		try {
