@@ -51,7 +51,7 @@ function render(node, target) {
 	// folder
 	if (node.children) {
 		// render children
-		if (localStorage.getItem('open.' + node.id)) {
+		if (a.open || getConfig('remember_open') && localStorage.getItem('open.' + node.id)) {
 			setClass(a, node, true);
 			a.open = true;
 			getChildrenFunction(node)(function(result) {
@@ -870,7 +870,7 @@ function getIcon(node) {
 
 // toggle folder open state
 function toggle(node, a) {
-	var isopen = localStorage.getItem('open.' + node.id);
+	var isopen = a.open;
 	setClass(a, node, !isopen);
 	a.open = !isopen;
 	if (isopen) {
@@ -906,7 +906,7 @@ function toggle(node, a) {
 			animate(node, a, isopen);
 		else
 			getChildrenFunction(node)(function(result) {
-				if (!a.nextSibling && localStorage.getItem('open.' + node.id)) {
+				if (!a.nextSibling && a.open) {
 					renderAll(result, a.parentNode);
 					animate(node, a, isopen);
 				}
@@ -1412,6 +1412,7 @@ var config = {
 	show_devices: 1,
 	show_root: 0,
 	newtab: 0,
+	remember_open: 1,
 	auto_close: 0,
 	auto_scale: 1,
 	css: '',
