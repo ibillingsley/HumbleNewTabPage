@@ -1187,7 +1187,7 @@ var config = {
 	auto_close: 0,
 	auto_scale: 1,
 	css: '',
-	number_top: 10,
+	number_top: 12,
 	number_closed: 10,
 	number_recent: 10,
 	icon_provider: 1
