@@ -35,6 +35,12 @@ This project is licensed under the **MIT License**, see [LICENSE_MIT.txt](LICENS
 Changelog
 ---------
 
+### Version 1.23 - December 2, 2018
+
+- Added tooltips for truncated text
+- Added option to remember open folders
+- (Firefox) Added option for favicon provider
+
 ### Version 1.22 - October 15, 2017
 
 - Firefox support
