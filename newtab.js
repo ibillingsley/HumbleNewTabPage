@@ -7,7 +7,11 @@ function render(node, target) {
 
 	var url = node.url || node.appLaunchUrl;
 	if (url) a.href = url;
-	a.innerText = node.title || node.name || '';
+
+	var text = node.title || node.name || '';
+	if (!text && node.title === null) text = node.url || '';
+	a.innerText = text;
+
 	if (node.tooltip) a.title = node.tooltip;
 	setClass(a, node);
 
