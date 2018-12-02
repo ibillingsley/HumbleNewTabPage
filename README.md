@@ -13,7 +13,7 @@ Redesigned new tab page featuring your bookmarks, apps, most visited, recently c
 
 [Download for Chrome](https://chrome.google.com/webstore/detail/mfgdmpfihlmdekaclngibpjhdebndhdj)
 
-[Download for Firefox](https://addons.mozilla.org/en-US/firefox/addon/humble-new-tab/)
+[Download for Firefox](https://addons.mozilla.org/firefox/addon/humble-new-tab/)
 
 This extension replaces the default new tab page. Drag and drop folders to create new columns or reorder them. The font, colors, spacing, and more can be customized from the options menu.
 
@@ -34,6 +34,12 @@ This project is licensed under the **MIT License**, see [LICENSE_MIT.txt](LICENS
 
 Changelog
 ---------
+
+### Version 1.23 - December 2, 2018
+
+- Added tooltips for truncated text
+- Added option to remember open folders
+- (Firefox) Added option for favicon provider
 
 ### Version 1.22 - October 15, 2017
 

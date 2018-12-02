@@ -12,7 +12,11 @@ function render(node, target) {
 
 	var url = node.url;
 	if (url) a.href = url;
-	a.innerText = node.title || node.name || '';
+
+	var text = node.title || node.name || '';
+	if (!text && node.title === null) text = node.url || '';
+	a.innerText = text;
+
 	if (node.tooltip) a.title = node.tooltip;
 	setClass(a, node);
 
@@ -50,7 +54,7 @@ function render(node, target) {
 	// folder
 	if (node.children) {
 		// render children
-		if (localStorage.getItem('open.' + node.id)) {
+		if (a.open || getConfig('remember_open') && localStorage.getItem('open.' + node.id)) {
 			setClass(a, node, true);
 			a.open = true;
 			getChildrenFunction(node)(function(result) {
@@ -87,6 +91,7 @@ function renderAll(nodes, target, toplevel) {
 		wrap.appendChild(ul);
 		target.appendChild(wrap);
 	}
+	updateTooltips();
 	return ul;
 }
 
@@ -535,6 +540,25 @@ function clearDropTarget() {
 	dropTarget = null;
 }
 
+var tooltipTimeout = null;
+// adds tootlips to truncated text
+function updateTooltips() {
+	if (tooltipTimeout) clearTimeout(tooltipTimeout);
+
+	tooltipTimeout = setTimeout(function() {
+		tooltipTimeout = null;
+		var elements = document.querySelectorAll('#main li a');
+		for (var i = 0; i < elements.length; i++) {
+			var element = elements[i];
+			if (element.clientWidth + 1 < element.scrollWidth) {
+				element.title = element.title || element.textContent;
+			} else if (element.title === element.textContent) {
+				element.title = '';
+			}
+		}
+	}, 100);
+}
+
 // gets function that returns children of node
 function getChildrenFunction(node) {
 	switch(node.id) {
@@ -686,7 +710,7 @@ function getIcon(node) {
 
 // toggle folder open state
 function toggle(node, a) {
-	var isopen = localStorage.getItem('open.' + node.id);
+	var isopen = a.open;
 	setClass(a, node, !isopen);
 	a.open = !isopen;
 	if (isopen) {
@@ -722,7 +746,7 @@ function toggle(node, a) {
 			animate(node, a, isopen);
 		else
 			getChildrenFunction(node)(function(result) {
-				if (!a.nextSibling && localStorage.getItem('open.' + node.id)) {
+				if (!a.nextSibling && a.open) {
 					renderAll(result, a.parentNode);
 					animate(node, a, isopen);
 				}
@@ -1046,7 +1070,7 @@ function getWeather(callback) {
 
 function getForecast(locId, onerror) {
 	var query = 'select * from weather.forecast where woeid="' + locId + '" and u="' + getConfig('weather_units') + '" limit 1';
-	var url = 'http://query.yahooapis.com/v1/public/yql?format=json&q=' + encodeURIComponent(query);
+	var url = 'https://query.yahooapis.com/v1/public/yql?format=json&q=' + encodeURIComponent(query);
 	var request = new XMLHttpRequest();
 	request.onload = function(event) {
 		try {
@@ -1159,10 +1183,11 @@ var config = {
 	show_closed: 1,
 	show_root: 0,
 	newtab: 0,
+	remember_open: 1,
 	auto_close: 0,
 	auto_scale: 1,
 	css: '',
-	number_top: 20,
+	number_top: 10,
 	number_closed: 10,
 	number_recent: 10,
 	icon_provider: 1
@@ -1657,6 +1682,7 @@ loadColumns();
 // fix scrollbar jump
 window.onresize = function(event) {
 	document.body.style.width = window.innerWidth + 'px';
+	updateTooltips();
 };
 window.onresize();
 

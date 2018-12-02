@@ -32,6 +32,7 @@
 			<option value="3">Favicon Kit</option>
 		</select></label>
 		<label><span>Lock columns</span><input id="options_lock" type="checkbox"/></label>
+		<label><span>Remember open folders</span><input id="options_remember_open" type="checkbox"/></label>
 		<label><span>Auto-close folders</span><input id="options_auto_close" type="checkbox"/></label>
 		<label><span>Show top-level folders</span><input id="options_show_root" type="checkbox"/></label>
 		<label><span>Hide options button</span><input id="options_hide_options" type="checkbox"/></label>
@@ -40,7 +41,7 @@
 		<legend>Content</legend>
 		<div id="options_show_bookmarks"></div>
 		<label><span>Most visited</span><input id="options_show_top" type="checkbox"/></label>
-		<label class="subopt"><span>Number of items</span><input id="options_number_top" type="number" min="1" max="20"/></label>
+		<label class="subopt"><span>Number of items</span><input id="options_number_top" type="number" min="1" max="10"/></label>
 		<label><span>Recent bookmarks</span><input id="options_show_recent" type="checkbox"/></label>
 		<label class="subopt"><span>Number of items</span><input id="options_number_recent" type="number" min="1" max="1000"/></label>
 		<label><span>Recently closed</span><input id="options_show_closed" type="checkbox"/></label>
@@ -127,7 +128,7 @@
 	</div><div class="section">
 	<fieldset>
 		<legend>Generated CSS</legend>
-		<label><textarea id="all_css" disabled></textarea></label>
+		<label><textarea id="all_css" readonly></textarea></label>
 	</fieldset>
 	<fieldset>
 		<legend>Custom CSS</legend>
