@@ -89,6 +89,7 @@ function renderAll(nodes, target, toplevel) {
 		wrap.appendChild(ul);
 		target.appendChild(wrap);
 	}
+	updateTooltips();
 	return ul;
 }
 
@@ -691,6 +692,25 @@ function clearDropTarget() {
 		dropTarget.style.margin = null;
 	}
 	dropTarget = null;
+}
+
+var tooltipTimeout = null;
+// adds tootlips to truncated text
+function updateTooltips() {
+	if (tooltipTimeout) clearTimeout(tooltipTimeout);
+
+	tooltipTimeout = setTimeout(function() {
+		tooltipTimeout = null;
+		var elements = document.querySelectorAll('#main li a');
+		for (var i = 0; i < elements.length; i++) {
+			var element = elements[i];
+			if (element.clientWidth + 1 < element.scrollWidth) {
+				element.title = element.title || element.textContent;
+			} else if (element.title === element.textContent) {
+				element.title = '';
+			}
+		}
+	}, 100);
 }
 
 // gets function that returns children of node
@@ -1887,6 +1907,7 @@ loadColumns();
 // fix scrollbar jump
 window.onresize = function(event) {
 	document.body.style.width = window.innerWidth + 'px';
+	updateTooltips();
 };
 window.onresize();
 
