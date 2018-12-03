@@ -768,13 +768,15 @@ function animate(node, a, isopen) {
 		wrap.style.height = isopen ? wrap.firstChild.clientHeight + 'px' : 0;
 		wrap.style.opacity = isopen ? 1 : 0;
 	}
-
-	setTimeout(function() {
-		wrap.className = 'wrap';
-		wrap.style.height = isopen ? 0 : wrap.firstChild.clientHeight + 'px';
-		wrap.style.opacity = isopen ? 0 : 1;
-		wrap.style.pointerEvents = isopen ? 'none' : null;
-	}, 0);
+	// requestAnimationFrame twice to ensure at least one frame has passed
+	requestAnimationFrame(function() {
+		requestAnimationFrame(function() {
+			wrap.className = 'wrap';
+			wrap.style.height = isopen ? 0 : wrap.firstChild.clientHeight + 'px';
+			wrap.style.opacity = isopen ? 0 : 1;
+			wrap.style.pointerEvents = isopen ? 'none' : null;
+		});
+	});
 
 	a.toggleAction = function() {
 		if (isopen)
