@@ -761,7 +761,7 @@ function getChildrenFunction(node) {
 					});
 				};
 		default:
-			if  (node.children)
+			if (node.children)
 				return function(callback) {
 					callback(node.children);
 				};
@@ -919,10 +919,10 @@ function animate(node, a, isopen) {
 	// TODO: fix nested animations
 	// wrapper needed for inner height value
 	var wrap = a.nextSibling;
-	if (a.toggleAction) {
+	if (a.animationHandle) {
 		// clear last animation
-		clearTimeout(a.toggleHandle);
-		a.toggleAction = null;
+		clearTimeout(a.animationHandle);
+		a.animationHandle = null;
 	} else {
 		// start animation
 		wrap.style.height = isopen ? wrap.firstChild.clientHeight + 'px' : 0;
@@ -931,24 +931,26 @@ function animate(node, a, isopen) {
 	// requestAnimationFrame twice to ensure at least one frame has passed
 	requestAnimationFrame(function() {
 		requestAnimationFrame(function() {
-			wrap.className = 'wrap';
-			wrap.style.height = isopen ? 0 : wrap.firstChild.clientHeight + 'px';
-			wrap.style.opacity = isopen ? 0 : 1;
-			wrap.style.pointerEvents = isopen ? 'none' : null;
+			if (wrap) {
+				wrap.className = 'wrap';
+				wrap.style.height = isopen ? 0 : wrap.firstChild.clientHeight + 'px';
+				wrap.style.opacity = isopen ? 0 : 1;
+				wrap.style.pointerEvents = isopen ? 'none' : null;
+			}
 		});
 	});
 
-	a.toggleAction = function() {
+	var duration = scale(getConfig('slide'), .2, 1) * 1000;
+	a.animationHandle = setTimeout(function() {
+		a.animationHandle = null;
 		if (isopen)
 			a.parentNode.removeChild(wrap);
 		else {
 			wrap.className = null;
 			wrap.removeAttribute('style');
 		}
-		a.toggleAction = null;
-	};
-	var duration = scale(getConfig('slide'), .2, 1) * 1000;
-	a.toggleHandle = setTimeout(a.toggleAction, duration);
+		wrap = null;
+	}, duration);
 }
 
 // opens immediate children of given node in new tabs
@@ -1508,7 +1510,7 @@ var theme = {};
 
 // get config value or default
 function getConfig(key) {
-	var value =  localStorage.getItem('options.' + key);
+	var value = localStorage.getItem('options.' + key);
 	if (value != null)
 		return typeof config[key] === 'number' ? Number(value) : value;
 	else
@@ -1795,7 +1797,7 @@ function initSettings() {
 				for (var key in config) {
 					var css = (getStyle(key, getConfig(key)));
 					if (css && css.length < 1000 && key != 'css')
-						allcss.value +=  css + '\n';
+						allcss.value += css + '\n';
 				}
 			}
 			// import/export
@@ -1884,7 +1886,7 @@ function initSettings() {
 
 		// load font list
 		if (chrome.fontSettings) {
-			chrome.fontSettings.getFontList(function(fonts)  {
+			chrome.fontSettings.getFontList(function(fonts) {
 				var select = document.getElementById('options_font');
 				if (select.childNodes.length > 0)
 					return;
