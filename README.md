@@ -35,7 +35,7 @@ This project is licensed under the **MIT License**, see [LICENSE_MIT.txt](LICENS
 Changelog
 ---------
 
-### Version 1.23.2 - December 3, 2018
+### Version 1.23.3 - December 3, 2018
 
 - (Firefox) Fixed folder closing animation
 
