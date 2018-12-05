@@ -27,9 +27,9 @@
 		"scripts" : ["background.js"],
 		"persistent" : true
 	},
-	"options_page": "newtab.html#options",
+	"options_page": "newtab.html?options",
 	"options_ui": {
-		"page": "newtab.html#options",
+		"page": "newtab.html?options",
 		"chrome_style": false,
 		"open_in_tab": true
 	},

@@ -6,7 +6,10 @@ function render(node, target) {
 	var a = document.createElement('a');
 
 	var url = node.url || node.appLaunchUrl;
-	if (url) a.href = url;
+	if (url)
+		a.href = url;
+	else
+		a.tabIndex = 0;
 
 	var text = node.title || node.name || '';
 	if (!text && node.title === null) text = node.url || '';
@@ -464,8 +467,8 @@ function renderMenu(items, x, y) {
 		var li = document.createElement('li');
 		if (items[i]) {
 			var a = document.createElement('a');
-			a.href="#";
 			a.innerText = items[i].label;
+			a.tabIndex = 0;
 			a.onclick = onMenuClick(items[i]);
 
 			li.appendChild(a);
@@ -1276,7 +1279,7 @@ function getWeather(callback) {
 		if (!loc) {
 			// no location
 			callback([{ id: 'weather', title: 'Location unknown', icon: 'http://l.yimg.com/a/i/us/we/52/3200.gif', action: function() {
-				location.hash = '#options';
+				showOptions(true);
 				document.getElementById('options_weather_location').focus();
 				return false;
 			} }]);
@@ -1747,9 +1750,9 @@ function initConfig(key) {
 	};
 
 	var reset = document.createElement('a');
-	reset.href = '#';
 	reset.className = 'revert';
 	reset.title = 'Reset to default';
+	reset.tabIndex = 0;
 	reset.onclick = function() {
 		setConfig(key, null);
 		showConfig(key);
@@ -1765,15 +1768,12 @@ var settingsInitialized = false;
 
 // initialize options panel
 function initSettings() {
-	if (settingsInitialized)
-		return;
+	settingsInitialized = true;
 
-	// options menu
-	document.getElementById('options_button').onclick = function() {
-		for (var key in config)
-			showConfig(key);
-
-		return true;
+	// options close button
+	document.getElementById('options_close_button').onclick = function() {
+		showOptions(false);
+		return false;
 	};
 
 	// options submenu navigation
@@ -1863,9 +1863,6 @@ function initSettings() {
 			select.id = input.id;
 		}
 
-		// all input elements for options should be in place
-		settingsInitialized = true;
-
 		// show settings
 		for (var key in config)
 			initConfig(key);
@@ -1905,9 +1902,34 @@ function initSettings() {
 	});
 }
 
+// show options panel
+function showOptions(show) {
+	document.getElementById('options').style.display = show ? 'block' : 'none';
+	if (show) {
+		if (!settingsInitialized)
+			initSettings();
+		for (var key in config)
+			showConfig(key);
+	}
+}
+
 // initialize page
 loadSettings();
 loadColumns();
+
+// keyboard shortcuts
+document.addEventListener('keypress', function(event) {
+	if (event.keyCode == 13 && event.target && event.target.onclick && event.target.tagName == 'A') {
+		event.target.dispatchEvent(new MouseEvent('click'));
+		event.preventDefault();
+	}
+});
+document.addEventListener('mousedown', function(event) {
+	document.body.classList.add('hide-focus');
+});
+document.addEventListener('keydown', function(event) {
+	document.body.classList.remove('hide-focus');
+});
 
 // fix scrollbar jump
 window.onresize = function(event) {
@@ -1917,11 +1939,12 @@ window.onresize = function(event) {
 window.onresize();
 
 // load options panel
-window.onhashchange = function(event) {
-	if (location.hash === '#options')
-		initSettings();
+document.getElementById('options_button').onclick = function() {
+	showOptions(true);
+	return false;
 };
-window.onhashchange();
+if (location.search === '?options')
+	showOptions(true);
 
 // refresh recently closed
 if (chrome.sessions)
