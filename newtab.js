@@ -505,7 +505,7 @@ function renderMenu(items, x, y) {
 				closeMenu(ul);
 			return true;
 		};
-	}, 0);
+	}, 20);
 	return ul;
 }
 
