@@ -867,7 +867,7 @@ function getIcon(node) {
 	icon.className = 'icon';
 	icon.src = url;
 	if (url2x) icon.srcset = url2x + ' 2x';
-	icon.alt = '';
+	icon.alt = ' ';
 	return icon;
 }
 
