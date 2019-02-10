@@ -752,17 +752,17 @@ function getChildrenFunction(node) {
 					callback(result);
 				});
 			};
-		case 'weather':
-			if (node.children)
-				return function(callback) {
-					callback(node.children);
-				};
-			else
-				return function(callback) {
-					getWeather(function(result) {
-						callback(result[0].children);
-					});
-				};
+		// case 'weather':
+		// 	if (node.children)
+		// 		return function(callback) {
+		// 			callback(node.children);
+		// 		};
+		// 	else
+		// 		return function(callback) {
+		// 			getWeather(function(result) {
+		// 				callback(result[0].children);
+		// 			});
+		// 		};
 		default:
 			if (node.children)
 				return function(callback) {
@@ -801,11 +801,11 @@ function getSubTree(id, callback) {
 		case 'devices':
 			callback([{ title: 'Other devices', id: 'devices', children: true }]);
 			break;
-		case 'weather':
-			getWeather(function(result) {
-				callback(result);
-			});
-			break;
+		// case 'weather':
+		// 	getWeather(function(result) {
+		// 		callback(result);
+		// 	});
+		// 	break;
 		default:
 			chrome.bookmarks.getSubTree(id, function(result) {
 				if (result)
@@ -982,7 +982,7 @@ function openLink(node, newtab) {
 var columns; // columns[x][y] = id
 var root; // root[] = id
 var coords; // coords[id] = {x:x, y:y}
-var special = ['top', 'apps', 'recent', 'weather', 'closed', 'devices'];
+var special = ['top', 'apps', 'recent', /*'weather',*/ 'closed', 'devices'];
 
 // ensure root folders are included
 function verifyColumns() {

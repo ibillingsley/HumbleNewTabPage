@@ -1,7 +1,7 @@
 Humble New Tab Page
 ===================
 
-Redesigned new tab page featuring your bookmarks, apps, most visited, recently closed, and weather in a custom layout.
+Redesigned new tab page featuring your bookmarks, apps, most visited, and recently closed in a custom layout.
 
 ![](media/shot.1.png)
 
