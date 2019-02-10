@@ -1,7 +1,7 @@
 Humble New Tab Page
 ===================
 
-Redesigned new tab page featuring your bookmarks, apps, most visited, recently closed, and weather in a custom layout.
+Redesigned new tab page featuring your bookmarks, apps, most visited, and recently closed in a custom layout.
 
 ![](media/shot.1.png)
 
@@ -34,6 +34,14 @@ This project is licensed under the **MIT License**, see [LICENSE_MIT.txt](LICENS
 
 Changelog
 ---------
+
+### Version 1.24 - February 10, 2019
+
+- Temporarily disabled weather feature
+- Improved keyboard navigation
+- Fixed bug opening options
+- (Firefox) Fixed broken favicons
+- (Firefox) Fixed context menu not opening
 
 ### Version 1.23.3 - December 3, 2018
 
