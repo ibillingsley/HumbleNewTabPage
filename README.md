@@ -40,6 +40,7 @@ Changelog
 - Temporarily disabled weather feature
 - Improved keyboard navigation
 - Fixed bug opening options
+- (Firefox) Changed extension name to HNTP
 - (Firefox) Fixed broken favicons
 - (Firefox) Fixed context menu not opening
 
