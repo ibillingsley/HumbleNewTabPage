@@ -8,14 +8,14 @@
 <body>
 <div id="main">
 </div>
-<a id="options_button" href="#options" title="Options"></a>
+<a id="options_button" title="Options" tabindex="0"></a>
 <div id="options">
-	<a id="options_close_button" href="#" title="Close">&times;</a>
+	<a id="options_close_button" title="Close" tabindex="0">&times;</a>
 	<ul id="options_nav">
-		<li><a href="#options/settings" class="current">Settings</a></li>
-		<li><a href="#options/appearance">Appearance</a></li>
-		<li><a href="#options/export">Import/Export</a></li>
-		<li><a href="#options/advanced">Advanced</a></li>
+		<li><a class="current" tabindex="0">Settings</a></li>
+		<li><a tabindex="0">Appearance</a></li>
+		<li><a tabindex="0">Import/Export</a></li>
+		<li><a tabindex="0">Advanced</a></li>
 	</ul>
 	<div class="section current">
 	<fieldset>
@@ -46,16 +46,16 @@
 		<label class="subopt"><span>Number of items</span><input id="options_number_recent" type="number" min="1" max="1000"/></label>
 		<label><span>Recently closed</span><input id="options_show_closed" type="checkbox"/></label>
 		<label class="subopt"><span>Number of items</span><input id="options_number_closed" type="number" min="1" max="25"/></label>
-		<label><span>Weather</span><input id="options_show_weather" type="checkbox"/></label>
+		<!-- <label><span>Weather</span><input id="options_show_weather" type="checkbox"/></label> -->
 	</fieldset>
-	<fieldset>
+	<!-- <fieldset>
 		<legend>Weather</legend>
 		<label><span>Location</span><input id="options_weather_location" type="text"/></label>
 		<label><span>°C or °F</span><select id="options_weather_units">
 			<option value="c">Celsius</option>
 			<option value="f">Fahrenheit</option>
 		</select></label>
-	</fieldset>
+	</fieldset> -->
 	</div><div class="section">
 	<fieldset>
 		<legend>Font</legend>

@@ -14,7 +14,7 @@ body {
 	position: relative;
 	max-width: 100%;
 	white-space: nowrap;
-	-webkit-user-select: none;
+	user-select: none;
 }
 #main ul, .menu {
 	margin: 0;
@@ -115,6 +115,9 @@ body {
 .dragstart {
 	opacity: 0.5;
 }
+.hide-focus :focus {
+	outline: none;
+}
 #options, #options_button {
 	position: absolute;
 	top: 0;
@@ -130,9 +133,6 @@ body {
 	box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3);
 	min-width: 32em;
 	min-height: 10em;
-}
-#options:target {
-	display: block;
 }
 #options_nav {
 	position: absolute;
@@ -152,6 +152,7 @@ body {
 	color: inherit;
 	border: solid transparent;
 	border-width: 1px 0;
+	cursor: pointer;
 }
 #options_nav a:hover {
 	background-color: #E4F4FF;
@@ -179,6 +180,7 @@ body {
 	width: 32px;
 	height: 32px;
 	opacity: 0.6;
+	cursor: pointer;
 }
 #options_button:hover {
 	opacity: 1;
@@ -195,6 +197,7 @@ body {
 	width: 32px;
 	height: 32px;
 	line-height: 32px;
+	cursor: pointer;
 }
 legend {
 	color: #888;
@@ -214,7 +217,6 @@ label {
 label span {
 	float: left;
 	text-align: left;
-	max-width: 11.9em;
 	line-height: 1.9;
 }
 input, select, textarea, .revert {
@@ -260,6 +262,7 @@ input[type="file"]::-webkit-file-upload-button {
 	height: 16px;
 	opacity: .5;
 	background-size: 100%;
+	cursor: pointer;
 }
 .revert:hover {
 	opacity: 1;
