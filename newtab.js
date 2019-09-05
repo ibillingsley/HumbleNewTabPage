@@ -11,9 +11,39 @@ function render(node, target) {
 	else
 		a.tabIndex = 0;
 
-	var text = node.title || node.name || '';
-	if (!text && node.title === null) text = node.url || '';
-	a.innerText = text;
+	if (localStorage.getItem('hasInput.' + node.id) == "true" || localStorage.getItem('isEdit.' + node.id) == "true") {
+		var form = document.createElement("form");
+		var input = document.createElement("input");
+		input.placeholder = node.title;
+		var submit = document.createElement("input");
+		submit.type = 'submit';
+
+		form.appendChild(input);
+		form.appendChild(submit);
+
+		submit.onclick = function () {
+			chrome.bookmarks.update(node.id, {
+				title: input.value
+			});
+
+			localStorage.setItem('hasInput.' + node.id, false);
+
+			renderColumns();
+			toggle(node, a);
+		};
+
+		a.appendChild(form);
+
+		a.style.display = "flex";
+		input.style.marginLeft = "-1px";
+		input.style.fontSize = "16px";
+
+
+	} else {
+		var text = node.title || node.name || '';
+		if (!text && node.title === null) text = node.url || '';
+		a.innerText = text;
+	}
 
 	if (node.tooltip) a.title = node.tooltip;
 	setClass(a, node);
@@ -32,6 +62,7 @@ function render(node, target) {
 		} else if (newtab == 2) {
 			// new background tab
 			a.onclick = function (event) {
+
 				chrome.tabs.getCurrent(function (tab) {
 					chrome.tabs.create({
 						url: url,
@@ -55,8 +86,8 @@ function render(node, target) {
 
 	li.appendChild(a);
 
-	// folder
 	if (node.children) {
+		// folder
 		// render children
 		if (a.open || getConfig('remember_open') && localStorage.getItem('open.' + node.id)) {
 			setClass(a, node, true);
@@ -70,10 +101,16 @@ function render(node, target) {
 		addFolderHandlers(node, a);
 		enableDragFolder(node, a);
 
-	} else if (node.type)
+	} else if (node.type) {
+		// app
 		addAppHandlers(node, a);
+	} else if (node.url) {
+		addUrlhandler();
+	}
 
 	target.appendChild(li);
+
+	//li.style.display = "flex";
 	return li;
 }
 
@@ -102,7 +139,7 @@ function renderAll(nodes, target, toplevel) {
 	updateTooltips();
 	return ul;
 }
-
+var Allnodes = [];
 // render column with given index
 function renderColumn(index, target) {
 	var ids = columns[index];
@@ -130,6 +167,7 @@ function renderColumn(index, target) {
 			}
 		};
 		getSubTree(ids[i], callback);
+		Allnodes.push(nodes);
 	}
 }
 
@@ -156,6 +194,85 @@ function renderColumns() {
 	enableDragDrop();
 }
 
+// renders a popup menu at given coordinates
+function renderMenu(items, x, y) {
+	var ul = document.createElement('ul');
+	ul.className = 'menu';
+	for (var i = 0; i < items.length; i++) {
+		var li = document.createElement('li');
+		if (items[i]) {
+			var a = document.createElement('a');
+			a.innerText = items[i].label;
+			a.tabIndex = 0;
+			a.onclick = onMenuClick(items[i]);
+
+			li.appendChild(a);
+		} else if (i > 0 && i < items.length - 1)
+			li.appendChild(document.createElement('hr'));
+		else
+			continue;
+
+		ul.appendChild(li);
+	}
+	document.body.appendChild(ul);
+	ul.style.left = Math.max(Math.min(x, window.innerWidth + window.scrollX - ul.clientWidth), 0) + 'px';
+	ul.style.top = Math.max(Math.min(y, window.innerHeight + window.scrollY - ul.clientHeight), 0) + 'px';
+	ul.onmousedown = function (event) {
+		event.stopPropagation();
+		return true;
+	};
+
+	setTimeout(function () {
+		document.onclick = function () {
+			closeMenu(ul);
+			return true;
+		};
+		document.onmousedown = function () {
+			closeMenu(ul);
+			return true;
+		};
+		document.oncontextmenu = function () {
+			closeMenu(ul);
+			return true;
+		};
+		document.onkeydown = function (event) {
+			if (event.keyCode == 27)
+				closeMenu(ul);
+			return true;
+		};
+	}, 3);
+
+	console.log("ok");
+
+	return ul;
+}
+
+///////////////////////////////////////////////////////////////
+///////////////////////// Popup Menu //////////////////////////
+///////////////////////////////////////////////////////////////
+
+// removes the given popup menu
+function closeMenu(ul) {
+	document.body.removeChild(ul);
+	document.onclick = null;
+	document.onmousedown = null;
+	document.oncontextmenu = null;
+	document.onkeydown = null;
+}
+
+// wraps click handler for menu items
+function onMenuClick(item) {
+	return function () {
+		item.action();
+		return false;
+	};
+}
+
+
+///////////////////////////////////////////////////////////////
+//////////////// Event Handler of Folder //////////////////////
+///////////////////////////////////////////////////////////////
+
 // enables click and context menu for given folder
 function addFolderHandlers(node, a) {
 	// click handler
@@ -165,7 +282,7 @@ function addFolderHandlers(node, a) {
 	};
 
 	// context menu handler
-	var items = getMenuItems(node);
+	var items = getMenuItems(node, a);
 
 	// column layout items
 	if (!getConfig('lock')) {
@@ -223,6 +340,37 @@ function addFolderHandlers(node, a) {
 	};
 }
 
+// enable drag and drop of folder
+function enableDragFolder(node, a) {
+	if (getConfig('lock'))
+		return;
+
+	a.draggable = true;
+	a.ondragstart = function (event) {
+		dragIds = [node.id];
+		event.stopPropagation();
+		event.dataTransfer.effectAllowed = 'move copy';
+		this.classList.add('dragstart');
+	};
+	a.ondragend = function (event) {
+		dragIds = null;
+		this.classList.remove('dragstart');
+		clearDropTarget();
+	};
+}
+
+///////////////////////////////////////////////////////////////
+///////////////// Event Handler of Url ////////////////////////
+///////////////////////////////////////////////////////////////
+
+function addUrlhandler(node, a) {
+
+}
+
+///////////////////////////////////////////////////////////////
+///////////////// Event Handler of Apps ///////////////////////
+///////////////////////////////////////////////////////////////
+
 // enables click and context menu for given app
 function addAppHandlers(node, a) {
 	if (!node.appLaunchUrl && node.id) {
@@ -275,6 +423,8 @@ function addAppHandlers(node, a) {
 	};
 
 	// enable drag and drop ordering of app. TODO refactor
+
+
 	a.draggable = true;
 	a.ondragstart = function (event) {
 		dragIds = [node.id];
@@ -362,6 +512,7 @@ function addColumnHandlers(index, ul) {
 
 	// single folder items
 	if (ids.length == 1)
+		// context menu handler
 		items = getMenuItems({
 			id: ids[0]
 		});
@@ -417,8 +568,11 @@ function addColumnHandlers(index, ul) {
 }
 
 // gets context menu items for given node
-function getMenuItems(node) {
+function getMenuItems(node, a) {
 	var items = [];
+
+
+
 	if (node.id == 'weather')
 		items.push({
 			label: 'Update weather',
@@ -465,11 +619,26 @@ function getMenuItems(node) {
 		items.push({
 			label: 'Edit bookmarks',
 			action: function () {
-				openLink({
-					url: 'chrome://bookmarks/?id=' + node.id
-				}, 1);
+				localStorage.setItem('hasInput.' + node.id, true);
+				renderColumns();
 			}
 		});
+
+		items.push({
+			label: 'Add folder',
+			action: function () {
+				chrome.bookmarks.create({
+					'parentId': node.id,
+					'title': 'Enter the folder name'
+				}, function (result) {
+					localStorage.setItem('hasInput.' + result.id, true);
+				});
+
+				localStorage.setItem('open.' + node.id, true);
+				renderColumns();
+			}
+		});
+
 		if (root.indexOf(node.id) < 0) {
 			items.push({
 				label: 'Delete folder',
@@ -478,90 +647,24 @@ function getMenuItems(node) {
 						node.id);
 					renderColumns();
 				}
+
+
 			});
-			items.push({
-				label: 'Add folder',
-				action: function () {
-					chrome.bookmarks.create({
-						'parentId': node.id,
-						'title': 'test'
-					});
-					renderColumns();
-				}
-			});
+
 		}
 
 	}
 
+
+
 	return items;
 }
 
-// wraps click handler for menu items
-function onMenuClick(item) {
-	return function () {
-		item.action();
-		return false;
-	};
-}
 
-// renders a popup menu at given coordinates
-function renderMenu(items, x, y) {
-	var ul = document.createElement('ul');
-	ul.className = 'menu';
-	for (var i = 0; i < items.length; i++) {
-		var li = document.createElement('li');
-		if (items[i]) {
-			var a = document.createElement('a');
-			a.innerText = items[i].label;
-			a.tabIndex = 0;
-			a.onclick = onMenuClick(items[i]);
 
-			li.appendChild(a);
-		} else if (i > 0 && i < items.length - 1)
-			li.appendChild(document.createElement('hr'));
-		else
-			continue;
-
-		ul.appendChild(li);
-	}
-	document.body.appendChild(ul);
-	ul.style.left = Math.max(Math.min(x, window.innerWidth + window.scrollX - ul.clientWidth), 0) + 'px';
-	ul.style.top = Math.max(Math.min(y, window.innerHeight + window.scrollY - ul.clientHeight), 0) + 'px';
-	ul.onmousedown = function (event) {
-		event.stopPropagation();
-		return true;
-	};
-
-	setTimeout(function () {
-		document.onclick = function () {
-			closeMenu(ul);
-			return true;
-		};
-		document.onmousedown = function () {
-			closeMenu(ul);
-			return true;
-		};
-		document.oncontextmenu = function () {
-			closeMenu(ul);
-			return true;
-		};
-		document.onkeydown = function (event) {
-			if (event.keyCode == 27)
-				closeMenu(ul);
-			return true;
-		};
-	}, 20);
-	return ul;
-}
-
-// removes the given popup menu
-function closeMenu(ul) {
-	document.body.removeChild(ul);
-	document.onclick = null;
-	document.onmousedown = null;
-	document.oncontextmenu = null;
-	document.onkeydown = null;
-}
+///////////////////////////////////////////////////////////////
+//////////////// Event Handler of COLUMN //////////////////////
+///////////////////////////////////////////////////////////////
 
 var dragIds;
 
@@ -584,26 +687,12 @@ function enableDragColumn(id, column) {
 	};
 }
 
+
+///////////////////////////////////////////////////////////////
+///////////////// Drag & Drop mechanism  //////////////////////
+///////////////////////////////////////////////////////////////
+
 var dropTarget;
-
-// enable drag and drop of folder
-function enableDragFolder(node, a) {
-	if (getConfig('lock'))
-		return;
-
-	a.draggable = true;
-	a.ondragstart = function (event) {
-		dragIds = [node.id];
-		event.stopPropagation();
-		event.dataTransfer.effectAllowed = 'move copy';
-		this.classList.add('dragstart');
-	};
-	a.ondragend = function (event) {
-		dragIds = null;
-		this.classList.remove('dragstart');
-		clearDropTarget();
-	};
-}
 
 // init drag and drop handlers
 function enableDragDrop() {
@@ -1054,7 +1143,6 @@ var columns; // columns[x][y] = id
 var root; // root[] = id
 var coords; // coords[id] = {x:x, y:y}
 var special = ['top', 'apps', 'recent', /*'weather',*/ 'closed', 'devices'];
-
 // ensure root folders are included
 function verifyColumns() {
 	// default layout
@@ -2007,6 +2095,8 @@ function showOptions(show) {
 			showConfig(key);
 	}
 }
+
+
 
 // initialize page
 loadSettings();
