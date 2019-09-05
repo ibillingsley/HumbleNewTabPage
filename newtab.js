@@ -11,9 +11,39 @@ function render(node, target) {
 	else
 		a.tabIndex = 0;
 
-	var text = node.title || node.name || '';
-	if (!text && node.title === null) text = node.url || '';
-	a.innerText = text;
+	if (localStorage.getItem('hasInput.' + node.id) == "true" || localStorage.getItem('isEdit.' + node.id) == "true") {
+		var form = document.createElement("form");
+		var input = document.createElement("input");
+		input.placeholder = node.title;
+		var submit = document.createElement("input");
+		submit.type = 'submit';
+
+		form.appendChild(input);
+		form.appendChild(submit);
+
+		submit.onclick = function () {
+			chrome.bookmarks.update(node.id, {
+				title: input.value
+			});
+
+			localStorage.setItem('hasInput.' + node.id, false);
+
+			renderColumns();
+			toggle(node, a);
+		};
+
+		a.appendChild(form);
+
+		a.style.display = "flex";
+		input.style.marginLeft = "-1px";
+		input.style.fontSize = "16px";
+
+
+	} else {
+		var text = node.title || node.name || '';
+		if (!text && node.title === null) text = node.url || '';
+		a.innerText = text;
+	}
 
 	if (node.tooltip) a.title = node.tooltip;
 	setClass(a, node);
@@ -21,7 +51,7 @@ function render(node, target) {
 	a.insertBefore(getIcon(node), a.firstChild);
 
 	if (node.action) {
-		a.onclick = function(event) {
+		a.onclick = function (event) {
 			return node.action(event);
 		};
 	} else if (url) {
@@ -31,9 +61,14 @@ function render(node, target) {
 			a.target = '_blank';
 		} else if (newtab == 2) {
 			// new background tab
-			a.onclick = function(event) {
-				chrome.tabs.getCurrent(function(tab) {
-					chrome.tabs.create({url: url, active: false, openerTabId: tab.id});
+			a.onclick = function (event) {
+
+				chrome.tabs.getCurrent(function (tab) {
+					chrome.tabs.create({
+						url: url,
+						active: false,
+						openerTabId: tab.id
+					});
 				});
 				return false;
 			};
@@ -41,7 +76,7 @@ function render(node, target) {
 		// fix opening chrome:// and file:/// urls
 		var urlStart = url.substring(0, 6);
 		if (urlStart === 'chrome' || urlStart === 'file:/')
-			a.onclick = function() {
+			a.onclick = function () {
 				openLink(node, newtab);
 				return false;
 			};
@@ -51,13 +86,13 @@ function render(node, target) {
 
 	li.appendChild(a);
 
-	// folder
 	if (node.children) {
+		// folder
 		// render children
 		if (a.open || getConfig('remember_open') && localStorage.getItem('open.' + node.id)) {
 			setClass(a, node, true);
 			a.open = true;
-			getChildrenFunction(node)(function(result) {
+			getChildrenFunction(node)(function (result) {
 				renderAll(result, li);
 			});
 		}
@@ -66,10 +101,16 @@ function render(node, target) {
 		addFolderHandlers(node, a);
 		enableDragFolder(node, a);
 
-	} else if (node.type)
+	} else if (node.type) {
+		// app
 		addAppHandlers(node, a);
+	} else if (node.url) {
+		addUrlhandler();
+	}
 
 	target.appendChild(li);
+
+	//li.style.display = "flex";
 	return li;
 }
 
@@ -83,7 +124,10 @@ function renderAll(nodes, target, toplevel) {
 			render(node, ul);
 	}
 	if (ul.childNodes.length === 0)
-		render({ id: 'empty', title: '< Empty >' }, ul);
+		render({
+			id: 'empty',
+			title: '< Empty >'
+		}, ul);
 	if (toplevel)
 		target.appendChild(ul);
 	else {
@@ -95,12 +139,14 @@ function renderAll(nodes, target, toplevel) {
 	updateTooltips();
 	return ul;
 }
-
+var Allnodes = [];
 // render column with given index
 function renderColumn(index, target) {
 	var ids = columns[index];
 	if (ids.length == 1 && ids[0] != 'weather' && !getConfig('show_root'))
-		getChildrenFunction({id: ids[0]})(function(result) {
+		getChildrenFunction({
+			id: ids[0]
+		})(function (result) {
 			renderAll(result, target);
 			addColumnHandlers(index, target);
 		});
@@ -108,7 +154,7 @@ function renderColumn(index, target) {
 		var i = 0;
 		var nodes = [];
 		// get all nodes for column
-		var callback = function(result) {
+		var callback = function (result) {
 			for (var j = 0; j < result.length; j++)
 				nodes.push(result[j]);
 			i++;
@@ -121,6 +167,7 @@ function renderColumn(index, target) {
 			}
 		};
 		getSubTree(ids[i], callback);
+		Allnodes.push(nodes);
 	}
 }
 
@@ -147,23 +194,102 @@ function renderColumns() {
 	enableDragDrop();
 }
 
+// renders a popup menu at given coordinates
+function renderMenu(items, x, y) {
+	var ul = document.createElement('ul');
+	ul.className = 'menu';
+	for (var i = 0; i < items.length; i++) {
+		var li = document.createElement('li');
+		if (items[i]) {
+			var a = document.createElement('a');
+			a.innerText = items[i].label;
+			a.tabIndex = 0;
+			a.onclick = onMenuClick(items[i]);
+
+			li.appendChild(a);
+		} else if (i > 0 && i < items.length - 1)
+			li.appendChild(document.createElement('hr'));
+		else
+			continue;
+
+		ul.appendChild(li);
+	}
+	document.body.appendChild(ul);
+	ul.style.left = Math.max(Math.min(x, window.innerWidth + window.scrollX - ul.clientWidth), 0) + 'px';
+	ul.style.top = Math.max(Math.min(y, window.innerHeight + window.scrollY - ul.clientHeight), 0) + 'px';
+	ul.onmousedown = function (event) {
+		event.stopPropagation();
+		return true;
+	};
+
+	setTimeout(function () {
+		document.onclick = function () {
+			closeMenu(ul);
+			return true;
+		};
+		document.onmousedown = function () {
+			closeMenu(ul);
+			return true;
+		};
+		document.oncontextmenu = function () {
+			closeMenu(ul);
+			return true;
+		};
+		document.onkeydown = function (event) {
+			if (event.keyCode == 27)
+				closeMenu(ul);
+			return true;
+		};
+	}, 3);
+
+	console.log("ok");
+
+	return ul;
+}
+
+///////////////////////////////////////////////////////////////
+///////////////////////// Popup Menu //////////////////////////
+///////////////////////////////////////////////////////////////
+
+// removes the given popup menu
+function closeMenu(ul) {
+	document.body.removeChild(ul);
+	document.onclick = null;
+	document.onmousedown = null;
+	document.oncontextmenu = null;
+	document.onkeydown = null;
+}
+
+// wraps click handler for menu items
+function onMenuClick(item) {
+	return function () {
+		item.action();
+		return false;
+	};
+}
+
+
+///////////////////////////////////////////////////////////////
+//////////////// Event Handler of Folder //////////////////////
+///////////////////////////////////////////////////////////////
+
 // enables click and context menu for given folder
 function addFolderHandlers(node, a) {
 	// click handler
-	a.onclick = function() {
+	a.onclick = function () {
 		toggle(node, a, getChildrenFunction(node));
 		return false;
 	};
 
 	// context menu handler
-	var items = getMenuItems(node);
+	var items = getMenuItems(node, a);
 
 	// column layout items
 	if (!getConfig('lock')) {
-		items.push(null);// spacer
+		items.push(null); // spacer
 		items.push({
 			label: 'Create new column',
-			action: function() {
+			action: function () {
 				addColumn([node.id]);
 			}
 		});
@@ -173,51 +299,82 @@ function addFolderHandlers(node, a) {
 			if (pos.y > 0)
 				items.push({
 					label: 'Move folder up',
-					action: function() {
+					action: function () {
 						addRow(node.id, pos.x, pos.y - 1);
 					}
 				});
 			if (pos.y < columns[pos.x].length - 1)
 				items.push({
 					label: 'Move folder down',
-					action: function() {
+					action: function () {
 						addRow(node.id, pos.x, pos.y + 2);
 					}
 				});
 			if (pos.x > 0)
 				items.push({
 					label: 'Move folder left',
-					action: function() {
+					action: function () {
 						addRow(node.id, pos.x - 1);
 					}
 				});
 			if (pos.x < columns.length - 1)
 				items.push({
 					label: 'Move folder right',
-					action: function() {
+					action: function () {
 						addRow(node.id, pos.x + 1);
 					}
 				});
-			if (root.indexOf(node.id) < 0)
+			if (root.indexOf(node.id) < 0) //if is root folder
 				items.push({
 					label: 'Remove folder',
-					action: function() {
+					action: function () {
 						removeRow(pos.x, pos.y);
 					}
 				});
 		}
 	}
 
-	a.oncontextmenu = function(event) {
+	a.oncontextmenu = function (event) {
 		renderMenu(items, event.pageX, event.pageY);
 		return false;
 	};
 }
 
+// enable drag and drop of folder
+function enableDragFolder(node, a) {
+	if (getConfig('lock'))
+		return;
+
+	a.draggable = true;
+	a.ondragstart = function (event) {
+		dragIds = [node.id];
+		event.stopPropagation();
+		event.dataTransfer.effectAllowed = 'move copy';
+		this.classList.add('dragstart');
+	};
+	a.ondragend = function (event) {
+		dragIds = null;
+		this.classList.remove('dragstart');
+		clearDropTarget();
+	};
+}
+
+///////////////////////////////////////////////////////////////
+///////////////// Event Handler of Url ////////////////////////
+///////////////////////////////////////////////////////////////
+
+function addUrlhandler(node, a) {
+
+}
+
+///////////////////////////////////////////////////////////////
+///////////////// Event Handler of Apps ///////////////////////
+///////////////////////////////////////////////////////////////
+
 // enables click and context menu for given app
 function addAppHandlers(node, a) {
 	if (!node.appLaunchUrl && node.id) {
-		a.onclick = function() {
+		a.onclick = function () {
 			chrome.management.launchApp(node.id);
 			return false;
 		};
@@ -266,20 +423,22 @@ function addAppHandlers(node, a) {
 	};
 
 	// enable drag and drop ordering of app. TODO refactor
+
+
 	a.draggable = true;
-	a.ondragstart = function(event) {
+	a.ondragstart = function (event) {
 		dragIds = [node.id];
 		event.stopPropagation();
 		event.dataTransfer.effectAllowed = 'move copy';
 		this.classList.add('dragstart');
 	};
-	a.ondragend = function(event) {
+	a.ondragend = function (event) {
 		dragIds = null;
 		this.classList.remove('dragstart');
 		clearDropTarget();
 	};
 	var li = a.parentNode;
-	li.ondragover = function(event) {
+	li.ondragover = function (event) {
 		event.preventDefault();
 		event.stopPropagation();
 		event.dataTransfer.dropEffect = 'move';
@@ -303,11 +462,11 @@ function addAppHandlers(node, a) {
 		return false;
 	};
 
-	li.ondragleave = function(event) {
+	li.ondragleave = function (event) {
 		clearDropTarget();
 	};
 
-	li.ondrop = function(event) {
+	li.ondrop = function (event) {
 		event.stopPropagation();
 
 		var target = event.target;
@@ -337,7 +496,9 @@ function addAppHandlers(node, a) {
 		// refresh
 		var parent = li.parentNode.parentNode;
 		parent.removeChild(li.parentNode);
-		getChildrenFunction({id: 'apps'})(function(result) {
+		getChildrenFunction({
+			id: 'apps'
+		})(function (result) {
 			renderAll(result, parent);
 		});
 		return false;
@@ -347,32 +508,35 @@ function addAppHandlers(node, a) {
 // enables context menu for given column
 function addColumnHandlers(index, ul) {
 	var items = [];
-	var ids = columns[index];
+	var ids = columns[index]; // ids of columns children
 
 	// single folder items
 	if (ids.length == 1)
-		items = getMenuItems({id: ids[0]});
+		// context menu handler
+		items = getMenuItems({
+			id: ids[0]
+		});
 
 	// column layout items
 	if (!getConfig('lock') && columns.length > 1) {
-		items.push(null);// spacer
+		items.push(null); // spacer
 		if (index > 0)
 			items.push({
 				label: 'Move column left',
-				action: function() {
+				action: function () {
 					addColumn(ids, index - 1);
 				}
 			});
 		if (index < columns.length - 1)
 			items.push({
 				label: 'Move column right',
-				action: function() {
+				action: function () {
 					addColumn(ids, index + 2);
 				}
 			});
 		items.push({
 			label: 'Remove column',
-			action: function() {
+			action: function () {
 				removeColumn(index);
 			}
 		});
@@ -380,14 +544,14 @@ function addColumnHandlers(index, ul) {
 			if (index > 0)
 				items.push({
 					label: 'Move folder left',
-					action: function() {
+					action: function () {
 						addRow(ids[0], index - 1);
 					}
 				});
 			if (index < columns.length - 1)
 				items.push({
 					label: 'Move folder right',
-					action: function() {
+					action: function () {
 						addRow(ids[0], index + 1);
 					}
 				});
@@ -395,7 +559,7 @@ function addColumnHandlers(index, ul) {
 	}
 
 	if (items.length > 0)
-		ul.oncontextmenu = function(event) {
+		ul.oncontextmenu = function (event) {
 			if (event.target.tagName == 'A' || event.target.parentNode.tagName == 'A')
 				return true;
 			renderMenu(items, event.pageX, event.pageY);
@@ -404,119 +568,103 @@ function addColumnHandlers(index, ul) {
 }
 
 // gets context menu items for given node
-function getMenuItems(node) {
+function getMenuItems(node, a) {
 	var items = [];
+
+
+
 	if (node.id == 'weather')
 		items.push({
 			label: 'Update weather',
-			action: function() {
+			action: function () {
 				refreshWeather();
 			}
 		});
 	else
 		items.push({
 			label: 'Open all links in folder',
-			action: function() {
+			action: function () {
 				openLinks(node);
 			}
 		});
 	if (node.id == 'closed')
 		items.push({
 			label: 'Clear browsing data',
-			action: function() {
-				openLink({ url: 'chrome://settings/clearBrowserData' }, 1);
+			action: function () {
+				openLink({
+					url: 'chrome://settings/clearBrowserData'
+				}, 1);
 			}
 		});
 	if (node.id == 'apps')
 		items.push({
 			label: 'Manage apps',
-			action: function() {
-				openLink({ url: 'chrome://apps' }, 1);
+			action: function () {
+				openLink({
+					url: 'chrome://apps'
+				}, 1);
 			}
 		});
 	if (node.id == 'devices')
 		items.push({
 			label: 'History',
-			action: function() {
-				openLink({ url: 'chrome://history' }, 1);
+			action: function () {
+				openLink({
+					url: 'chrome://history'
+				}, 1);
 			}
 		});
-	if (Number(node.id))
+	if (Number(node.id)) {
+
 		items.push({
 			label: 'Edit bookmarks',
-			action: function() {
-				openLink({ url: 'chrome://bookmarks/?id=' + node.id }, 1);
+			action: function () {
+				localStorage.setItem('hasInput.' + node.id, true);
+				renderColumns();
 			}
 		});
+
+		items.push({
+			label: 'Add folder',
+			action: function () {
+				chrome.bookmarks.create({
+					'parentId': node.id,
+					'title': 'Enter the folder name'
+				}, function (result) {
+					localStorage.setItem('hasInput.' + result.id, true);
+				});
+
+				localStorage.setItem('open.' + node.id, true);
+				renderColumns();
+			}
+		});
+
+		if (root.indexOf(node.id) < 0) {
+			items.push({
+				label: 'Delete folder',
+				action: function () {
+					chrome.bookmarks.removeTree(
+						node.id);
+					renderColumns();
+				}
+
+
+			});
+
+		}
+
+	}
+
+
+
 	return items;
 }
 
-// wraps click handler for menu items
-function onMenuClick(item) {
-	return function() {
-		item.action();
-		return false;
-	};
-}
 
-// renders a popup menu at given coordinates
-function renderMenu(items, x, y) {
-	var ul = document.createElement('ul');
-	ul.className = 'menu';
-	for (var i = 0; i < items.length; i++) {
-		var li = document.createElement('li');
-		if (items[i]) {
-			var a = document.createElement('a');
-			a.innerText = items[i].label;
-			a.tabIndex = 0;
-			a.onclick = onMenuClick(items[i]);
 
-			li.appendChild(a);
-		} else if (i > 0 && i < items.length - 1)
-			li.appendChild(document.createElement('hr'));
-		else
-			continue;
-
-		ul.appendChild(li);
-	}
-	document.body.appendChild(ul);
-	ul.style.left = Math.max(Math.min(x, window.innerWidth + window.scrollX - ul.clientWidth), 0) + 'px';
-	ul.style.top = Math.max(Math.min(y, window.innerHeight + window.scrollY - ul.clientHeight), 0) + 'px';
-	ul.onmousedown = function(event) {
-		event.stopPropagation();
-		return true;
-	};
-
-	setTimeout(function() {
-		document.onclick = function() {
-			closeMenu(ul);
-			return true;
-		};
-		document.onmousedown = function() {
-			closeMenu(ul);
-			return true;
-		};
-		document.oncontextmenu = function() {
-			closeMenu(ul);
-			return true;
-		};
-		document.onkeydown = function(event) {
-			if (event.keyCode == 27)
-				closeMenu(ul);
-			return true;
-		};
-	}, 20);
-	return ul;
-}
-
-// removes the given popup menu
-function closeMenu(ul) {
-	document.body.removeChild(ul);
-	document.onclick = null;
-	document.onmousedown = null;
-	document.oncontextmenu = null;
-	document.onkeydown = null;
-}
+///////////////////////////////////////////////////////////////
+//////////////// Event Handler of COLUMN //////////////////////
+///////////////////////////////////////////////////////////////
 
 var dragIds;
 
@@ -527,38 +675,24 @@ function enableDragColumn(id, column) {
 
 	column.draggable = true;
 
-	column.ondragstart = function(event) {
+	column.ondragstart = function (event) {
 		dragIds = columns[id];
 		event.dataTransfer.effectAllowed = 'move';
 		this.classList.add('dragstart');
 	};
-	column.ondragend = function(event) {
+	column.ondragend = function (event) {
 		dragIds = null;
 		this.classList.remove('dragstart');
 		clearDropTarget();
 	};
 }
+
+
+///////////////////////////////////////////////////////////////
+///////////////// Drag & Drop mechanism  //////////////////////
+///////////////////////////////////////////////////////////////
 
 var dropTarget;
-
-// enable drag and drop of folder
-function enableDragFolder(node, a) {
-	if (getConfig('lock'))
-		return;
-
-	a.draggable = true;
-	a.ondragstart = function(event) {
-		dragIds = [node.id];
-		event.stopPropagation();
-		event.dataTransfer.effectAllowed = 'move copy';
-		this.classList.add('dragstart');
-	};
-	a.ondragend = function(event) {
-		dragIds = null;
-		this.classList.remove('dragstart');
-		clearDropTarget();
-	};
-}
 
 // init drag and drop handlers
 function enableDragDrop() {
@@ -571,7 +705,7 @@ function enableDragDrop() {
 		return;
 	}
 
-	main.ondragover = function(event) {
+	main.ondragover = function (event) {
 		event.preventDefault();
 		event.dataTransfer.dropEffect = 'move';
 		// highlight drop target
@@ -601,11 +735,11 @@ function enableDragDrop() {
 		return false;
 	};
 
-	main.ondragleave = function(event) {
+	main.ondragleave = function (event) {
 		clearDropTarget();
 	};
 
-	main.ondrop = function(event) {
+	main.ondrop = function (event) {
 		event.stopPropagation();
 
 		var target = getDropTarget(event);
@@ -648,7 +782,7 @@ function getDropTarget(event) {
 		// target should be LI or UL by here...
 	} else
 		while (target && target.className != 'column')
-			target = target.parentNode;// target column
+			target = target.parentNode; // target column
 
 	return target;
 }
@@ -702,7 +836,7 @@ var tooltipTimeout = null;
 function updateTooltips() {
 	if (tooltipTimeout) clearTimeout(tooltipTimeout);
 
-	tooltipTimeout = setTimeout(function() {
+	tooltipTimeout = setTimeout(function () {
 		tooltipTimeout = null;
 		var elements = document.querySelectorAll('#main li a');
 		for (var i = 0; i < elements.length; i++) {
@@ -718,59 +852,59 @@ function updateTooltips() {
 
 // gets function that returns children of node
 function getChildrenFunction(node) {
-	switch(node.id) {
+	switch (node.id) {
 		case 'top':
-			return function(callback) {
+			return function (callback) {
 				if (chrome.topSites)
-					chrome.topSites.get(function(result) {
+					chrome.topSites.get(function (result) {
 						callback(result.slice(0, getConfig('number_top')));
 					});
 				else
 					callback([]);
 			};
 		case 'apps':
-			return function(callback) {
-				getApps(function(result) {
+			return function (callback) {
+				getApps(function (result) {
 					callback(result);
 				});
 			};
 		case 'recent':
-			return function(callback) {
-				chrome.bookmarks.getRecent(getConfig('number_recent'), function(result) {
+			return function (callback) {
+				chrome.bookmarks.getRecent(getConfig('number_recent'), function (result) {
 					callback(result);
 				});
 			};
 		case 'closed':
-			return function(callback) {
-				getClosed(function(result) {
+			return function (callback) {
+				getClosed(function (result) {
 					callback(result);
 				});
 			};
 		case 'devices':
-			return function(callback) {
-				getDevices(function(result) {
+			return function (callback) {
+				getDevices(function (result) {
 					callback(result);
 				});
 			};
-		// case 'weather':
-		// 	if (node.children)
-		// 		return function(callback) {
-		// 			callback(node.children);
-		// 		};
-		// 	else
-		// 		return function(callback) {
-		// 			getWeather(function(result) {
-		// 				callback(result[0].children);
-		// 			});
-		// 		};
+			// case 'weather':
+			// 	if (node.children)
+			// 		return function(callback) {
+			// 			callback(node.children);
+			// 		};
+			// 	else
+			// 		return function(callback) {
+			// 			getWeather(function(result) {
+			// 				callback(result[0].children);
+			// 			});
+			// 		};
 		default:
 			if (node.children)
-				return function(callback) {
+				return function (callback) {
 					callback(node.children);
 				};
 			else
-				return function(callback) {
-					chrome.bookmarks.getSubTree(node.id, function(result) {
+				return function (callback) {
+					chrome.bookmarks.getSubTree(node.id, function (result) {
 						if (result)
 							callback(result[0].children);
 						else {
@@ -785,29 +919,49 @@ function getChildrenFunction(node) {
 
 // gets the subtree for given id
 function getSubTree(id, callback) {
-	switch(id) {
+	switch (id) {
 		case 'top':
-			callback([{ title: 'Most visited', id: 'top', children: true}]);
+			callback([{
+				title: 'Most visited',
+				id: 'top',
+				children: true
+			}]);
 			break;
 		case 'apps':
-			callback([{ title: 'Apps', id: 'apps', children: true }]);
+			callback([{
+				title: 'Apps',
+				id: 'apps',
+				children: true
+			}]);
 			break;
 		case 'recent':
-			callback([{ title: 'Recent bookmarks', id: 'recent', children: true }]);
+			callback([{
+				title: 'Recent bookmarks',
+				id: 'recent',
+				children: true
+			}]);
 			break;
 		case 'closed':
-			callback([{ title: 'Recently closed', id: 'closed', children: true }]);
+			callback([{
+				title: 'Recently closed',
+				id: 'closed',
+				children: true
+			}]);
 			break;
 		case 'devices':
-			callback([{ title: 'Other devices', id: 'devices', children: true }]);
+			callback([{
+				title: 'Other devices',
+				id: 'devices',
+				children: true
+			}]);
 			break;
-		// case 'weather':
-		// 	getWeather(function(result) {
-		// 		callback(result);
-		// 	});
-		// 	break;
+			// case 'weather':
+			// 	getWeather(function(result) {
+			// 		callback(result);
+			// 	});
+			// 	break;
 		default:
-			chrome.bookmarks.getSubTree(id, function(result) {
+			chrome.bookmarks.getSubTree(id, function (result) {
 				if (result)
 					callback(result);
 				else {
@@ -830,7 +984,7 @@ function setClass(target, node, isopen) {
 	else
 		target.classList.remove('open');
 
-	switch(node.id) {
+	switch (node.id) {
 		case 'top':
 		case 'apps':
 		case 'recent':
@@ -879,11 +1033,11 @@ function toggle(node, a) {
 	if (isopen) {
 		// close folder
 		localStorage.removeItem('open.' + node.id);
-		if (a.nextSibling){
+		if (a.nextSibling) {
 			// auto-close child folders
 			if (getConfig('auto_close')) {
 				var children = (a.nextSibling.tagName == 'DIV' ? a.nextSibling.firstChild : a.nextSibling).children;
-				for (var i=0; i<children.length; i++) {
+				for (var i = 0; i < children.length; i++) {
 					var child = children[i].firstChild;
 					if (child.open)
 						child.onclick();
@@ -898,7 +1052,7 @@ function toggle(node, a) {
 		// auto-close sibling folders
 		if (getConfig('auto_close')) {
 			var siblings = a.parentNode.parentNode.children;
-			for (var i=0; i<siblings.length; i++) {
+			for (var i = 0; i < siblings.length; i++) {
 				var sibling = siblings[i].firstChild;
 				if (sibling != a && sibling.open)
 					sibling.onclick();
@@ -908,7 +1062,7 @@ function toggle(node, a) {
 		if (a.nextSibling)
 			animate(node, a, isopen);
 		else
-			getChildrenFunction(node)(function(result) {
+			getChildrenFunction(node)(function (result) {
 				if (!a.nextSibling && a.open) {
 					renderAll(result, a.parentNode);
 					animate(node, a, isopen);
@@ -932,8 +1086,8 @@ function animate(node, a, isopen) {
 		wrap.style.opacity = isopen ? 1 : 0;
 	}
 	// requestAnimationFrame twice to ensure at least one frame has passed
-	requestAnimationFrame(function() {
-		requestAnimationFrame(function() {
+	requestAnimationFrame(function () {
+		requestAnimationFrame(function () {
 			if (wrap) {
 				wrap.className = 'wrap';
 				wrap.style.height = isopen ? 0 : wrap.firstChild.clientHeight + 'px';
@@ -944,7 +1098,7 @@ function animate(node, a, isopen) {
 	});
 
 	var duration = scale(getConfig('slide'), .2, 1) * 1000;
-	a.animationHandle = setTimeout(function() {
+	a.animationHandle = setTimeout(function () {
 		a.animationHandle = null;
 		if (isopen)
 			a.parentNode.removeChild(wrap);
@@ -958,8 +1112,8 @@ function animate(node, a, isopen) {
 
 // opens immediate children of given node in new tabs
 function openLinks(node) {
-	chrome.tabs.getCurrent(function(tab) {
-		getChildrenFunction(node)(function(result) {
+	chrome.tabs.getCurrent(function (tab) {
+		getChildrenFunction(node)(function (result) {
 			for (var i = 0; i < result.length; i++)
 				openLink(result[i], 2);
 		});
@@ -970,11 +1124,17 @@ function openLinks(node) {
 function openLink(node, newtab) {
 	var url = node.url || node.appLaunchUrl;
 	if (url) {
-		chrome.tabs.getCurrent(function(tab) {
+		chrome.tabs.getCurrent(function (tab) {
 			if (newtab)
-				chrome.tabs.create({url: url, active: (newtab == 1), openerTabId: tab.id});
+				chrome.tabs.create({
+					url: url,
+					active: (newtab == 1),
+					openerTabId: tab.id
+				});
 			else
-				chrome.tabs.update(tab.id, {url: url});
+				chrome.tabs.update(tab.id, {
+					url: url
+				});
 		});
 	}
 }
@@ -983,13 +1143,12 @@ var columns; // columns[x][y] = id
 var root; // root[] = id
 var coords; // coords[id] = {x:x, y:y}
 var special = ['top', 'apps', 'recent', /*'weather',*/ 'closed', 'devices'];
-
 // ensure root folders are included
 function verifyColumns() {
 	// default layout
 	if (columns.length === 0) {
 		columns.push([]);
-		columns.push(special.filter(function(a) {
+		columns.push(special.filter(function (a) {
 			return getConfig('show_' + a) != false;
 		}));
 	}
@@ -1015,7 +1174,10 @@ function verifyColumns() {
 	coords = {};
 	for (var x = 0; x < columns.length; x++) {
 		for (var y = 0; y < columns[x].length; y++) {
-			coords[columns[x][y]] = { x: x, y: y};
+			coords[columns[x][y]] = {
+				x: x,
+				y: y
+			};
 		}
 		if (columns[x].length === 0) {
 			columns.splice(x, 1);
@@ -1027,24 +1189,26 @@ function verifyColumns() {
 // load columns from storage or default
 function loadColumns() {
 	columns = [];
-	for (var x = 0; ; x++) {
+	for (var x = 0;; x++) {
 		var row = [];
-		for (var y = 0; ; y++) {
+		for (var y = 0;; y++) {
 			var id = localStorage.getItem('column.' + x + '.' + y);
-			if (id) row.push(id); else break;
+			if (id) row.push(id);
+			else break;
 		}
-		if (row.length > 0) columns.push(row); else break;
+		if (row.length > 0) columns.push(row);
+		else break;
 	}
 
 	if (root) {
 		verifyColumns();
 		renderColumns();
 	} else {
-		chrome.bookmarks.getTree(function(result) {
+		chrome.bookmarks.getTree(function (result) {
 			// init root nodes
 			var nodes = result[0].children;
-			root = special.slice(0);
 
+			root = special.slice(0);
 			for (var i = 0; i < nodes.length; i++)
 				root.push(nodes[i].id);
 
@@ -1057,8 +1221,8 @@ function loadColumns() {
 // saves current column configuration to storage
 function saveColumns() {
 	// clear previous config
-	for (var x = 0; ; x++) {
-		for (var y = 0; ; y++) {
+	for (var x = 0;; x++) {
+		for (var y = 0;; y++) {
 			var id = localStorage.getItem('column.' + x + '.' + y);
 			if (id)
 				localStorage.removeItem('column.' + x + '.' + y);
@@ -1072,7 +1236,7 @@ function saveColumns() {
 	// save new config
 	for (var x = 0; x < columns.length; x++) {
 		for (var y = 0; y < columns[x].length; y++) {
-			localStorage.setItem('column.' + x +'.' + y, columns[x][y]);
+			localStorage.setItem('column.' + x + '.' + y, columns[x][y]);
 		}
 	}
 	// refresh
@@ -1084,7 +1248,7 @@ function addColumn(ids, index) {
 	var column = ids.slice(0);
 	// remove previous locations
 	for (var x = 0; x < columns.length; x++) {
-		for (var y = 0; y < columns[x].length; y++ ) {
+		for (var y = 0; y < columns[x].length; y++) {
 			if (ids.indexOf(columns[x][y]) > -1) {
 				columns[x].splice(y, 1);
 				y--;
@@ -1143,10 +1307,10 @@ var appsOrder;
 
 // gets apps
 function getApps(callback) {
-	chrome.management.getAll(function(result) {
-		result = result.filter(function(a) {
+	chrome.management.getAll(function (result) {
+		result = result.filter(function (a) {
 			return a.enabled && a.type !== 'extension' && a.type !== 'theme' && a.isApp !== false &&
-				a.id !== 'nmmhkkegccagdldgiimedpiccmgmieda';// hide "Google Wallet Service"
+				a.id !== 'nmmhkkegccagdldgiimedpiccmgmieda'; // hide "Google Wallet Service"
 		});
 
 		result.push({
@@ -1183,10 +1347,12 @@ function getApps(callback) {
 // get recently closed tabs
 function getClosed(callback) {
 	var maxResults = getConfig('number_closed');
-	chrome.sessions.getRecentlyClosed({ maxResults: maxResults }, function(sessions) {
+	chrome.sessions.getRecentlyClosed({
+		maxResults: maxResults
+	}, function (sessions) {
 		var nodes = [];
 		for (var i = 0; i < sessions.length && i < maxResults; i++) {
-			(function(session) {
+			(function (session) {
 				if (session.window && session.window.tabs.length == 1)
 					session.tab = session.window.tabs[0];
 
@@ -1194,8 +1360,8 @@ function getClosed(callback) {
 					title: session.tab ? session.tab.title : session.window.tabs.length + ' Tabs',
 					url: session.tab ? session.tab.url : null,
 					className: session.window ? 'window' : null,
-					action: function() {
-						chrome.sessions.restore(session.window ? session.window.sessionId : session.tab.sessionId, function(session) {
+					action: function () {
+						chrome.sessions.restore(session.window ? session.window.sessionId : session.tab.sessionId, function (session) {
 							refreshClosed();
 						});
 						return false;
@@ -1208,10 +1374,12 @@ function getClosed(callback) {
 }
 
 function getDevices(callback) {
-	chrome.sessions.getDevices({ maxResults: getConfig('number_closed') }, function(devices) {
+	chrome.sessions.getDevices({
+		maxResults: getConfig('number_closed')
+	}, function (devices) {
 		var nodes = [];
 		for (var i = 0; i < devices.length; i++) {
-			(function(device) {
+			(function (device) {
 				var children = [];
 				for (var j = 0; j < device.sessions.length; j++) {
 					var session = device.sessions[j];
@@ -1251,7 +1419,9 @@ function refreshClosed() {
 		targets.push(target);
 	}
 
-	getChildrenFunction({id: 'closed'})(function(result) {
+	getChildrenFunction({
+		id: 'closed'
+	})(function (result) {
 		for (var i = 0; i < targets.length; i++)
 			renderAll(result, targets[i]);
 	});
@@ -1265,10 +1435,10 @@ function getWeather(callback) {
 		callback(cached.data);
 		return;
 	}
-	var onerror = function(event) {
+	var onerror = function (event) {
 		console.log(event);
 		var targets = document.getElementsByClassName('weather');
-		for (var i = 0; i < targets.length; i++){
+		for (var i = 0; i < targets.length; i++) {
 			targets[i].childNodes[1].nodeValue = 'Error loading weather';
 			targets[i].classList.add('error');
 		}
@@ -1278,11 +1448,16 @@ function getWeather(callback) {
 		var loc = getConfig('weather_location');
 		if (!loc) {
 			// no location
-			callback([{ id: 'weather', title: 'Location unknown', icon: 'http://l.yimg.com/a/i/us/we/52/3200.gif', action: function() {
-				showOptions(true);
-				document.getElementById('options_weather_location').focus();
-				return false;
-			} }]);
+			callback([{
+				id: 'weather',
+				title: 'Location unknown',
+				icon: 'http://l.yimg.com/a/i/us/we/52/3200.gif',
+				action: function () {
+					showOptions(true);
+					document.getElementById('options_weather_location').focus();
+					return false;
+				}
+			}]);
 			return;
 		}
 	}
@@ -1290,13 +1465,17 @@ function getWeather(callback) {
 	if (cached && new Date() - new Date(cached.date) < 1000 * 60 * 120) {
 		callback(cached.data);
 	} else {
-		callback([{ id: 'weather', title: 'Loading weather...', children: true }]);
+		callback([{
+			id: 'weather',
+			title: 'Loading weather...',
+			children: true
+		}]);
 	}
 
 	if (locId) {
 		getForecast(locId, onerror);
 	} else {
-		getLocationId(loc, function(locId) {
+		getLocationId(loc, function (locId) {
 			getForecast(locId, onerror);
 		}, onerror);
 	}
@@ -1306,7 +1485,7 @@ function getForecast(locId, onerror) {
 	var query = 'select * from weather.forecast where woeid="' + locId + '" and u="' + getConfig('weather_units') + '" limit 1';
 	var url = 'https://query.yahooapis.com/v1/public/yql?format=json&q=' + encodeURIComponent(query);
 	var request = new XMLHttpRequest();
-	request.onload = function(event) {
+	request.onload = function (event) {
 		try {
 			var nodes = [];
 			var response = JSON.parse(request.response).query.results.channel;
@@ -1346,7 +1525,7 @@ function getLocationId(text, callback, onerror) {
 	var query = 'select woeid from geo.places where text="' + text + '" and focus="" limit 1';
 	var url = 'https://query.yahooapis.com/v1/public/yql?format=json&q=' + encodeURIComponent(query);
 	var request = new XMLHttpRequest();
-	request.onload = function() {
+	request.onload = function () {
 		var response = JSON.parse(request.response);
 		if (response && response.query && response.query.results && response.query.results.place && response.query.results.place.woeid) {
 			var woeid = response.query.results.place.woeid;
@@ -1376,7 +1555,7 @@ function refreshWeather(data, url) {
 	var targets = document.getElementsByClassName('weather');
 	for (var i = 0; i < targets.length; i++) {
 		var target = targets[i].parentNode;
-		getSubTree('weather', function(result) {
+		getSubTree('weather', function (result) {
 			var li = render(result[0], target.parentNode, 'weather');
 			target.parentNode.replaceChild(li, target);
 		});
@@ -1529,7 +1708,7 @@ function setConfig(key, value) {
 		value = (theme.hasOwnProperty(key) ? theme[key] : config[key]);
 	}
 	// special case settings
-	if (key == 'lock' || key == 'newtab' || key == 'show_root' || key.substring(0,6) == 'number')
+	if (key == 'lock' || key == 'newtab' || key == 'show_root' || key.substring(0, 6) == 'number')
 		loadColumns();
 	else if (key == 'theme') {
 		theme = themes[value];
@@ -1544,7 +1723,7 @@ function setConfig(key, value) {
 			setConfig('weather_location_id', null);
 		else
 			refreshWeather();
-	} else if (key.substring(0,4) == 'show') {
+	} else if (key.substring(0, 4) == 'show') {
 		var id = key.substring(5);
 		if (!value) {
 			if (coords[id])
@@ -1562,7 +1741,7 @@ function setConfig(key, value) {
 var styles = {};
 
 function getStyle(key, value) {
-	switch(key) {
+	switch (key) {
 		case 'font':
 			return '#main a { font-family: "' + value + '"; }';
 		case 'font_size':
@@ -1597,15 +1776,15 @@ function getStyle(key, value) {
 			return '.wrap { -webkit-transition-duration: ' + scale(value, .2, 1) + 's; }';
 		case 'spacing':
 			return '#main a { line-height: ' + scale(value, 2, 5.6, .8) + '; ' +
-							'padding-left: ' + scale(value, .8, 2, .4) + 'em; ' +
-							'padding-right: ' + scale(value, .8, 2, .4) + 'em; }';
+				'padding-left: ' + scale(value, .8, 2, .4) + 'em; ' +
+				'padding-right: ' + scale(value, .8, 2, .4) + 'em; }';
 		case 'width':
 			return '#main { width: ' + (getConfig('auto_scale') ?
 				scale(value, 80, 100, 20) + '%' :
 				scale(value, 1000, 3000, 400) + 'px') + '; }';
 		case 'h_pos':
 			var margin = 100 - scale(getConfig('width'), 80, 100, 20);
-			return '#main { left: ' + scale(value, 0, margin/2, -margin/2) + '%; }';
+			return '#main { left: ' + scale(value, 0, margin / 2, -margin / 2) + '%; }';
 		case 'v_margin':
 			return '#main { margin-top: ' + (getConfig('auto_scale') ?
 				scale(value, 5, 20) + '%' :
@@ -1695,7 +1874,9 @@ function loadSettings() {
 	// load settings
 	for (var key in config)
 		if (key === 'background_image_file')
-			setTimeout(function() { onChange('background_image_file'); }, 0);
+			setTimeout(function () {
+				onChange('background_image_file');
+			}, 0);
 		else
 			onChange(key);
 }
@@ -1721,14 +1902,14 @@ function initConfig(key) {
 		var swatch = document.createElement('input');
 		swatch.type = 'color';
 		swatch.value = input.value;
-		swatch.oninput = function(event) {
+		swatch.oninput = function (event) {
 			input.value = this.value;
 			return input.onchange(event);
 		};
 		input.swatch = swatch;
 		input.parentNode.appendChild(swatch);
 	}
-	input.onchange = function(event) {
+	input.onchange = function (event) {
 		if (input.type == 'file') {
 			// load file
 			if (event.target.files.length == 1) {
@@ -1739,7 +1920,7 @@ function initConfig(key) {
 					return false;
 				}
 				var reader = new FileReader();
-				reader.onload = function(f) {
+				reader.onload = function (f) {
 					if (f.target.result)
 						setConfig(key, f.target.result);
 				};
@@ -1753,7 +1934,7 @@ function initConfig(key) {
 	reset.className = 'revert';
 	reset.title = 'Reset to default';
 	reset.tabIndex = 0;
-	reset.onclick = function() {
+	reset.onclick = function () {
 		setConfig(key, null);
 		showConfig(key);
 		return false;
@@ -1771,7 +1952,7 @@ function initSettings() {
 	settingsInitialized = true;
 
 	// options close button
-	document.getElementById('options_close_button').onclick = function() {
+	document.getElementById('options_close_button').onclick = function () {
 		showOptions(false);
 		return false;
 	};
@@ -1780,9 +1961,9 @@ function initSettings() {
 	var options = document.getElementById('options');
 	var nav = document.getElementById('options_nav');
 	var index = 0;
-	for (var i=0; i<nav.children.length; i++) {
+	for (var i = 0; i < nav.children.length; i++) {
 		var a = nav.children[i].firstChild;
-		a.onclick = function(e) {
+		a.onclick = function (e) {
 			// clear current style
 			nav.children[index].firstChild.classList.remove('current');
 			options.getElementsByClassName('section')[index].classList.remove('current');
@@ -1791,7 +1972,7 @@ function initSettings() {
 			nav.children[index].firstChild.classList.add('current');
 			options.getElementsByClassName('section')[index].classList.add('current');
 			// show custom css on advanced tab
-			if (index === nav.children.length-1) {
+			if (index === nav.children.length - 1) {
 				var allcss = document.getElementById('all_css');
 				allcss.value = '';
 				for (var key in config) {
@@ -1801,10 +1982,10 @@ function initSettings() {
 				}
 			}
 			// import/export
-			if (index === nav.children.length-2) {
+			if (index === nav.children.length - 2) {
 				var exports = document.getElementById('options_export');
 				var imports = document.getElementById('options_import');
-				var replacer = function(key, value) {
+				var replacer = function (key, value) {
 					if (key == 'options.background_image_file' || key == 'weather.cache') {
 						return undefined;
 					}
@@ -1813,10 +1994,10 @@ function initSettings() {
 				exports.value = JSON.stringify(localStorage, replacer);
 				imports.value = '';
 				imports.placeholder = 'Paste exported settings here';
-				imports.onchange = function() {
+				imports.onchange = function () {
 					try {
 						var imported = JSON.parse(imports.value);
-						for(var key in imported) {
+						for (var key in imported) {
 							localStorage.setItem(key, imported[key]);
 						}
 						imports.value = '';
@@ -1835,7 +2016,7 @@ function initSettings() {
 	}
 
 	// add options to hide bookmark folders
-	chrome.bookmarks.getTree(function(result) {
+	chrome.bookmarks.getTree(function (result) {
 		var placeholder = document.getElementById('options_show_bookmarks');
 		var nodes = result[0].children;
 		for (var i = 0; i < nodes.length; i++) {
@@ -1883,12 +2064,14 @@ function initSettings() {
 
 		// load font list
 		if (chrome.fontSettings) {
-			chrome.fontSettings.getFontList(function(fonts) {
+			chrome.fontSettings.getFontList(function (fonts) {
 				var select = document.getElementById('options_font');
 				if (select.childNodes.length > 0)
 					return;
 
-				fonts.unshift({ fontId: 'Sans-serif' });
+				fonts.unshift({
+					fontId: 'Sans-serif'
+				});
 				for (var i = 0; i < fonts.length; i++) {
 					var font = fonts[i].fontId;
 					var option = document.createElement('option');
@@ -1913,33 +2096,35 @@ function showOptions(show) {
 	}
 }
 
+
+
 // initialize page
 loadSettings();
 loadColumns();
 
 // keyboard shortcuts
-document.addEventListener('keypress', function(event) {
+document.addEventListener('keypress', function (event) {
 	if (event.keyCode == 13 && event.target && event.target.onclick && event.target.tagName == 'A') {
 		event.target.dispatchEvent(new MouseEvent('click'));
 		event.preventDefault();
 	}
 });
-document.addEventListener('mousedown', function(event) {
+document.addEventListener('mousedown', function (event) {
 	document.body.classList.add('hide-focus');
 });
-document.addEventListener('keydown', function(event) {
+document.addEventListener('keydown', function (event) {
 	document.body.classList.remove('hide-focus');
 });
 
 // fix scrollbar jump
-window.onresize = function(event) {
+window.onresize = function (event) {
 	document.body.style.width = window.innerWidth + 'px';
 	updateTooltips();
 };
 window.onresize();
 
 // load options panel
-document.getElementById('options_button').onclick = function() {
+document.getElementById('options_button').onclick = function () {
 	showOptions(true);
 	return false;
 };
