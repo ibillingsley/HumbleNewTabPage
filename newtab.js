@@ -206,6 +206,15 @@ function addFolderHandlers(node, a) {
 					}
 				});
 		}
+
+		var isSpecialNode = special.indexOf(node.id) >= 0;
+		if (!isSpecialNode)
+			items.push({
+				label: 'Sort by name',
+				action: function() {
+					sortByName(node, a);
+				}
+			});
 	}
 
 	a.oncontextmenu = function(event) {
@@ -907,13 +916,15 @@ function toggle(node, a) {
 		// open folder
 		if (a.nextSibling)
 			animate(node, a, isopen);
-		else
+		else{
+			delete node.children;
 			getChildrenFunction(node)(function(result) {
 				if (!a.nextSibling && a.open) {
 					renderAll(result, a.parentNode);
 					animate(node, a, isopen);
 				}
 			});
+		}
 	}
 }
 
@@ -977,6 +988,51 @@ function openLink(node, newtab) {
 				chrome.tabs.update(tab.id, {url: url});
 		});
 	}
+}
+
+// sorts the contents of the given node
+function sortByName(node, a) {
+	getChildrenFunction(node)(function(result) {
+		var folders = [];
+		var bookmarks = [];
+
+		for (var i = 0; i < result.length; i++) {
+			var item = result[i];
+
+			if (item.url)
+				bookmarks.push(item);
+			else
+				folders.push(item);
+		}
+
+		folders.sort(compareNodes);
+		bookmarks.sort(compareNodes);
+
+		var allItems = folders.concat(bookmarks);
+
+		for (var i = 0; i < allItems.length; i++) {
+			var item = allItems[i];
+			chrome.bookmarks.move(item.id, {index: i});
+		}
+
+		refreshFolder(node, a);
+	});
+}
+
+// compares the 2 nodes by title
+function compareNodes(nodeA, nodeB) {
+	var titleA = nodeA.title.toLowerCase();
+	var titleB = nodeB.title.toLowerCase();
+
+	if ( titleA < titleB ){
+		return -1;
+	}
+
+	if ( titleA > titleB ){
+		return 1;
+	}
+
+	return 0;
 }
 
 var columns; // columns[x][y] = id
@@ -1255,6 +1311,16 @@ function refreshClosed() {
 		for (var i = 0; i < targets.length; i++)
 			renderAll(result, targets[i]);
 	});
+}
+
+function refreshFolder(node, a) {
+	if (a.nextSibling) {
+		a.parentNode.removeChild(a.nextSibling);
+
+		getChildrenFunction({id: node.id})(function(result) {
+			renderAll(result, a.parentNode);
+		});
+	}
 }
 
 // gets weather info from yahoo weather
