@@ -698,6 +698,8 @@ function getIcon(node) {
 			} else if (iconProvider == 3) {
 				url = 'https://api.faviconkit.com/' + domain[1] + '/16';
 				url2x = 'https://api.faviconkit.com/' + domain[1] + '/32';
+			} else if (iconProvider == 4) {
+				url = 'https://external-content.duckduckgo.com/ip3/' + domain[1] + '.ico';
 			} else {
 				return document.createElement('div');
 			}
