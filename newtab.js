@@ -1932,8 +1932,10 @@ document.addEventListener('keydown', function(event) {
 });
 
 // fix scrollbar jump
+// fix for Vivaldi showing zero innerWidth on first load
 window.onresize = function(event) {
-	document.body.style.width = window.innerWidth + 'px';
+  const windowWidth = window.innerWidth;
+	document.body.style.width = windowWidth == 0 ? '100%' : windowWidth + 'px';
 	updateTooltips();
 };
 window.onresize();
