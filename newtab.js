@@ -696,10 +696,15 @@ function getIcon(node) {
 			} else if (iconProvider == 2) {
 				url = 'https://s2.googleusercontent.com/s2/favicons?domain_url=' + domain[1];
 			} else if (iconProvider == 3) {
-				url = 'https://api.faviconkit.com/' + domain[1] + '/16';
-				url2x = 'https://api.faviconkit.com/' + domain[1] + '/32';
+				url = 'https://quintessential-jade-termite.faviconkit.com/' + domain[1] + '/16';
+				url2x = 'https://quintessential-jade-termite.faviconkit.com/' + domain[1] + '/32';
 			} else if (iconProvider == 4) {
 				url = 'https://external-content.duckduckgo.com/ip3/' + domain[1] + '.ico';
+			} else if (iconProvider == 5) {
+				url = 'https://s.qwant.com/fav/x/x/' + domain[1].replace('.', '_') + '.ico';
+			} else if (iconProvider == 6) {
+				url = 'https://favicon.yandex.net/favicon/v2/' + domain[1] + '?size=16';
+				url2x = 'https://favicon.yandex.net/favicon/v2/' + domain[1] + '?size=32';
 			} else {
 				return document.createElement('div');
 			}
