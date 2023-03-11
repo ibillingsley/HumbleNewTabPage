@@ -834,8 +834,8 @@ function getIcon(node) {
 	} else if (node.icon)
 		url = node.icon;
 	else if (node.url || node.appLaunchUrl) {
-		url = 'chrome://favicon/' + (node.url || node.appLaunchUrl);
-		url2x = 'chrome://favicon/size/16@2x/' + (node.url || node.appLaunchUrl);
+		url = `/_favicon/?pageUrl=${encodeURIComponent(node.url || node.appLaunchUrl)}&size=16`;
+		url2x = `/_favicon/?pageUrl=${encodeURIComponent(node.url || node.appLaunchUrl)}&size=32`;
 	}
 
 	var icon = document.createElement(url ? 'img' : 'div');
