@@ -1,7 +1,5 @@
-Privacy Policy
-==============
+# Privacy Policy
 
-Humble New Tab page does not collect, store, or share any user data or personal information, with the following exceptions:
+Humble New Tab Page does not collect, store, or share any user data or personal information, with the following exception:
 
-- Location information is shared with Yahoo for the weather forecasting.
-- (Firefox only) The domain names of sites shown are shared with Google to retrieve website icons.
+- (Firefox only) To display website icons, the domain names of websites shown may be shared with the user selected third party: [DuckDuckGo](https://duckduckgo.com/privacy), [Qwant](https://about.qwant.com/legal/privacy/), [Google](https://policies.google.com/privacy), [Favicon Kit](https://faviconkit.com/), or [Yandex](https://yandex.com/legal/confidential/). This is configurable in the options.

@@ -35,11 +35,26 @@ This project is licensed under the **MIT License**, see [LICENSE_MIT.txt](LICENS
 Changelog
 ---------
 
+### Version 1.25 - March 11, 2023
+
+- Manifest V3
+- Update favicon
+- (Firefox) Added Qwant and Yandex favicon providers
+
+### Version 1.24.2 - February 21, 2020
+
+- (Firefox) Added DuckDuckGo favicon provider
+
+### Version 1.24.1 - May 14, 2019
+
+- (Firefox) Set addon ID for consistent page URL
+
 ### Version 1.24 - February 10, 2019
 
 - Temporarily disabled weather feature
 - Improved keyboard navigation
 - Fixed bug opening options
+- (Firefox) Changed extension name to HNTP
 - (Firefox) Fixed broken favicons
 - (Firefox) Fixed context menu not opening
 

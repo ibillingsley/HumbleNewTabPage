@@ -101,7 +101,7 @@ function renderAll(nodes, target, toplevel) {
 // render column with given index
 function renderColumn(index, target) {
 	var ids = columns[index];
-	if (ids.length == 1 && ids[0] != 'weather' && !getConfig('show_root'))
+	if (ids.length == 1 && !getConfig('show_root'))
 		getChildrenFunction({id: ids[0]})(function(result) {
 			renderAll(result, target);
 			addColumnHandlers(index, target);
@@ -278,14 +278,6 @@ function addColumnHandlers(index, ul) {
 // gets context menu items for given node
 function getMenuItems(node) {
 	var items = [];
-	if (node.id == 'weather')
-		items.push({
-			label: 'Update weather',
-			action: function() {
-				refreshWeather();
-			}
-		});
-	else
 		items.push({
 			label: 'Open all links in folder',
 			action: function() {
@@ -589,17 +581,6 @@ function getChildrenFunction(node) {
 					callback(result);
 				});
 			};
-		// case 'weather':
-		// 	if (node.children)
-		// 		return function(callback) {
-		// 			callback(node.children);
-		// 		};
-		// 	else
-		// 		return function(callback) {
-		// 			getWeather(function(result) {
-		// 				callback(result[0].children);
-		// 			});
-		// 		};
 		default:
 			if (node.children)
 				return function(callback) {
@@ -632,11 +613,6 @@ function getSubTree(id, callback) {
 		case 'closed':
 			callback([{ title: 'Recently closed', id: 'closed', children: true }]);
 			break;
-		// case 'weather':
-		// 	getWeather(function(result) {
-		// 		callback(result);
-		// 	});
-		// 	break;
 		default:
 			chrome.bookmarks.getSubTree(id, function(result) {
 				if (result)
@@ -665,7 +641,6 @@ function setClass(target, node, isopen) {
 		case 'top':
 		case 'recent':
 		case 'closed':
-		case 'weather':
 		case 'empty':
 			target.classList.add(node.id);
 	}
@@ -829,7 +804,7 @@ function openLink(node, newtab) {
 var columns; // columns[x][y] = id
 var root; // root[] = id
 var coords; // coords[id] = {x:x, y:y}
-var special = ['top', 'recent', /*'weather',*/ 'closed'];
+var special = ['top', 'recent', 'closed'];
 
 // ensure root folders are included
 function verifyColumns() {
@@ -1037,132 +1012,6 @@ function refreshClosed() {
 	});
 }
 
-// gets weather info from yahoo weather
-function getWeather(callback) {
-	// check cache (30 minute expiry)
-	var cached = JSON.parse(localStorage.getItem('weather.cache'));
-	if (cached && new Date() - new Date(cached.date) < 1000 * 60 * 30) {
-		callback(cached.data);
-		return;
-	}
-	var onerror = function(event) {
-		console.log(event);
-		var targets = document.getElementsByClassName('weather');
-		for (var i = 0; i < targets.length; i++){
-			targets[i].childNodes[1].nodeValue = 'Error loading weather';
-			targets[i].classList.add('error');
-		}
-	};
-	var locId = getConfig('weather_location_id');
-	if (!locId) {
-		var loc = getConfig('weather_location');
-		if (!loc) {
-			// no location
-			callback([{ id: 'weather', title: 'Location unknown', icon: 'http://l.yimg.com/a/i/us/we/52/3200.gif', action: function() {
-				showOptions(true);
-				document.getElementById('options_weather_location').focus();
-				return false;
-			} }]);
-			return;
-		}
-	}
-	// show cached (2 hours) or loading...
-	if (cached && new Date() - new Date(cached.date) < 1000 * 60 * 120) {
-		callback(cached.data);
-	} else {
-		callback([{ id: 'weather', title: 'Loading weather...', children: true }]);
-	}
-
-	if (locId) {
-		getForecast(locId, onerror);
-	} else {
-		getLocationId(loc, function(locId) {
-			getForecast(locId, onerror);
-		}, onerror);
-	}
-}
-
-function getForecast(locId, onerror) {
-	var query = 'select * from weather.forecast where woeid="' + locId + '" and u="' + getConfig('weather_units') + '" limit 1';
-	var url = 'https://query.yahooapis.com/v1/public/yql?format=json&q=' + encodeURIComponent(query);
-	var request = new XMLHttpRequest();
-	request.onload = function(event) {
-		try {
-			var nodes = [];
-			var response = JSON.parse(request.response).query.results.channel;
-
-			// current conditions
-			var current = response.item.condition;
-			var parentnode = {
-				id: 'weather',
-				title: current.temp + '°' + (getConfig('weather_units') == 'c' ? 'C' : 'F') + ' ' + current.text,
-				tooltip: response.item.title,
-				icon: 'http://l.yimg.com/a/i/us/we/52/' + current.code + '.gif'
-			};
-
-			// forecast
-			var forecast = response.item.forecast;
-			for (var i = 0; i < forecast.length && i < 5; i++) {
-				nodes.push({
-					title: forecast[i].day + ' ' +
-						forecast[i].high + '°, ' +
-						forecast[i].low + '° ' +
-						forecast[i].text,
-					icon: 'http://l.yimg.com/a/i/us/we/52/' + forecast[i].code + '.gif'
-				});
-			}
-			parentnode.children = nodes;
-			refreshWeather([parentnode], url);
-		} catch (e) {
-			onerror(e);
-		}
-	};
-	request.onerror = onerror;
-	request.open('GET', url + '&' + Date.now(), true);
-	request.send();
-}
-
-function getLocationId(text, callback, onerror) {
-	var query = 'select woeid from geo.places where text="' + text + '" and focus="" limit 1';
-	var url = 'https://query.yahooapis.com/v1/public/yql?format=json&q=' + encodeURIComponent(query);
-	var request = new XMLHttpRequest();
-	request.onload = function() {
-		var response = JSON.parse(request.response);
-		if (response && response.query && response.query.results && response.query.results.place && response.query.results.place.woeid) {
-			var woeid = response.query.results.place.woeid;
-			setConfig('weather_location_id', woeid);
-			callback(woeid);
-		} else {
-			onerror(response);
-		}
-	};
-	request.onerror = onerror;
-	request.open('GET', url + '&' + Date.now(), true);
-	request.send();
-}
-
-// refreshes weather items
-function refreshWeather(data, url) {
-	// cache data
-	if (data)
-		localStorage.setItem('weather.cache', JSON.stringify({
-			data: data,
-			url: url,
-			date: new Date()
-		}));
-	else
-		localStorage.removeItem('weather.cache');
-	// render
-	var targets = document.getElementsByClassName('weather');
-	for (var i = 0; i < targets.length; i++) {
-		var target = targets[i].parentNode;
-		getSubTree('weather', function(result) {
-			var li = render(result[0], target.parentNode, 'weather');
-			target.parentNode.replaceChild(li, target);
-		});
-	}
-}
-
 // options : default values
 var config = {
 	font: 'Sans-serif',
@@ -1188,12 +1037,8 @@ var config = {
 	slide: 1,
 	hide_options: 0,
 	lock: 0,
-	weather_location: '',
-	weather_location_id: '',
-	weather_units: 'c',
 	show_top: 1,
 	show_recent: 1,
-	show_weather: 1,
 	show_closed: 1,
 	show_root: 0,
 	newtab: 0,
@@ -1318,11 +1163,6 @@ function setConfig(key, value) {
 				showConfig(i);
 			}
 		}
-	} else if (key.substring(0, 7) == 'weather') {
-		if (key == 'weather_location')
-			setConfig('weather_location_id', null);
-		else
-			refreshWeather();
 	} else if (key.substring(0,4) == 'show') {
 		var id = key.substring(5);
 		if (!value) {

@@ -271,9 +271,6 @@ input[type="file"]::-webkit-file-upload-button {
 .empty .icon {
 	display: none;
 }
-.weather .icon {
-	background-image: none;
-}
 .revert {
 	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAAQCAMAAAAs2N9uAAAA0lBMVEUwMDD///////////8wMDAyMjIwMDAwMDAwMDAwMDA2NjYwMDAwMDAzMzMwMDDd3d10dHQ6OjowMDDw8PCAgIAwMDDb29ucnJxjY2M8PDz////5+fmMjIz///////+lpaVRUVH////////Z2dlcXFxlZWViYmI/Pz9sbGwwMDAwMDBERESJiYloaGjQ0NBra2vMzMxiYmJ7e3uhoaHu7u7///////////////////9hYWFgYGAwMDBLS0tTU1NDQ0NWVlZbW1tcXFw1NTVGRkZRUVF97P/NAAAAOnRSTlMAAIALq8cSCbcMupD83y1p5OkVatVmkLr8hgVYyRE7r+ICSjz6GPpp6x5y+rb1UfCN/tu2eBd+XDYGoYBnVQAAAI1JREFUeF5lz8UOwzAURNHnpMzMzMw4Scr9/19q/GTJSnqWdzHSkBQnTQg3hAOOL4WCX9gsESlGOcUeUKzbPZmSKZ2B9szm3GTmCzBYqVzBqyrna/UGsWarDXRkom6PlD4w4KQNgZEvjYGJJ01nc2DByVbeHwvLFSdo643pSdvd/nAUnAzldL5c5Ufx5wfvRBiIbpnbSAAAAABJRU5ErkJggg==) ;
 }
