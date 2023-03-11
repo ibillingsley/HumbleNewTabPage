@@ -277,9 +277,6 @@ input[type="file"]::-webkit-file-upload-button {
 .empty .icon {
 	display: none;
 }
-.weather .icon {
-	background-image: none;
-}
 /* The following icons are copyright (c) 2012 The Chromium Authors.
    see LICENSE_chromium_BSD.txt */
 .recent .icon {
