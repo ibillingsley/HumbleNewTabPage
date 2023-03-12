@@ -38,7 +38,7 @@ Changelog
 ### Version 1.25 - March 11, 2023
 
 - Manifest V3
-- Update favicon
+- Updated favicon
 - (Firefox) Added Qwant and Yandex favicon providers
 
 ### Version 1.24.2 - February 21, 2020
