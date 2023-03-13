@@ -1432,9 +1432,9 @@ function getStyle(key, value) {
 		case 'highlight_round':
 			return '#main a { border-radius: ' + scale(value, .2, 1.5) + 'em; }';
 		case 'fade':
-			return '#main a { -webkit-transition-duration: ' + scale(value, .2, 1) + 's; }';
+			return '#main a { transition-duration: ' + scale(value, .2, 1) + 's; }';
 		case 'slide':
-			return '.wrap { -webkit-transition-duration: ' + scale(value, .2, 1) + 's; }';
+			return '.wrap { transition-duration: ' + scale(value, .2, 1) + 's; }';
 		case 'spacing':
 			return '#main a { line-height: ' + scale(value, 2, 5.6, .8) + '; ' +
 							'padding-left: ' + scale(value, .8, 2, .4) + 'em; ' +
