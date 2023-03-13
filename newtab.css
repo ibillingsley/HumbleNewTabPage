@@ -273,7 +273,7 @@ input[type="file"]::-webkit-file-upload-button {
 	background-image: -webkit-image-set(url("icons/folder.png") 1x, url("icons/folder@2x.png") 2x);
 }
 .open .icon {
-	background-image: -webkit-image-set(url("icons/folder_open.png") 1x, url("icons/folder@2x.png") 2x);
+	background-image: -webkit-image-set(url("icons/folder_open.png") 1x, url("icons/folder_open@2x.png") 2x);
 }
 .empty .icon {
 	display: none;
