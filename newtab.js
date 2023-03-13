@@ -1771,12 +1771,9 @@ document.addEventListener('keydown', function(event) {
 	document.body.classList.remove('hide-focus');
 });
 
-// fix scrollbar jump
 window.onresize = function(event) {
-	document.body.style.width = window.innerWidth + 'px';
 	updateTooltips();
 };
-window.onresize();
 
 // load options panel
 document.getElementById('options_button').onclick = function() {

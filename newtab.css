@@ -2,6 +2,7 @@ body {
 	background-color: #FFF;
 	background-attachment: fixed;
 	background-position: left top;
+	width: 100vw;
 	margin: 0 auto;
 	overflow-x: hidden;
 	font-family: sans-serif;
