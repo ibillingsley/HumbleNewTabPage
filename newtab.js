@@ -661,28 +661,29 @@ function getIcon(node) {
 				size = iconInfo.size;
 			}
 		}
-	} else if (node.icon)
+	} else if (node.icon) {
 		url = node.icon;
-	else if (node.url) {
-		var domain = ('' + node.url).match(/:\/\/\/?([^/]+)/);
-		if (domain) {
+	} else if (node.url) {
+		try {
+			var u = new URL(node.url);
 			if (iconProvider == 1) {
-				url = node.url.substring(0, domain.index + domain[0].length) + '/favicon.ico';
+				url = u.origin + '/favicon.ico';
 			} else if (iconProvider == 2) {
-				url = 'https://s2.googleusercontent.com/s2/favicons?domain_url=' + domain[1];
+				url = 'https://t2.gstatic.com/faviconV2?url=' + u.origin + '&size=16&type=FAVICON&client=SOCIAL&fallback_opts=TYPE,SIZE,URL';
+				url2x = 'https://t2.gstatic.com/faviconV2?url=' + u.origin + '&size=32&type=FAVICON&client=SOCIAL&fallback_opts=TYPE,SIZE,URL';
 			} else if (iconProvider == 3) {
-				url = 'https://quintessential-jade-termite.faviconkit.com/' + domain[1] + '/16';
-				url2x = 'https://quintessential-jade-termite.faviconkit.com/' + domain[1] + '/32';
+				url = 'https://quintessential-jade-termite.faviconkit.com/' + u.hostname + '/16';
+				url2x = 'https://quintessential-jade-termite.faviconkit.com/' + u.hostname + '/32';
 			} else if (iconProvider == 4) {
-				url = 'https://external-content.duckduckgo.com/ip3/' + domain[1] + '.ico';
+				url = 'https://external-content.duckduckgo.com/ip3/' + u.hostname + '.ico';
 			} else if (iconProvider == 5) {
-				url = 'https://s.qwant.com/fav/x/x/' + domain[1].replace('.', '_') + '.ico';
+				url = 'https://s.qwant.com/fav/x/x/' + u.hostname.replace('.', '_') + '.ico';
 			} else if (iconProvider == 6) {
-				url = 'https://favicon.yandex.net/favicon/v2/' + domain[1] + '?size=16';
-				url2x = 'https://favicon.yandex.net/favicon/v2/' + domain[1] + '?size=32';
-			} else {
-				return document.createElement('div');
+				url = 'https://favicon.yandex.net/favicon/v2/' + u.hostname + '?size=16';
+				url2x = 'https://favicon.yandex.net/favicon/v2/' + u.hostname + '?size=32';
 			}
+		} catch (e) {
+			console.error(e);
 		}
 	}
 	var icon = document.createElement(url ? 'img' : 'div');
