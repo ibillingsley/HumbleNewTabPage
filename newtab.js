@@ -5,7 +5,7 @@ function render(node, target) {
 	var li = document.createElement('li');
 	var a = document.createElement('a');
 
-	var url = node.url || node.appLaunchUrl;
+	var url = node.url;
 	if (url)
 		a.href = url;
 	else
@@ -31,22 +31,26 @@ function render(node, target) {
 			a.target = '_blank';
 		} else if (newtab == 2) {
 			// new background tab
-			a.onclick = function(event) {
-				chrome.tabs.getCurrent(function(tab) {
-					chrome.tabs.create({url: url, active: false, openerTabId: tab.id});
-				});
+			a.onclick = function(e) {
+				openLink(node, newtab);
 				return false;
 			};
 		}
 		// fix opening chrome:// and file:/// urls
 		var urlStart = url.substring(0, 6);
-		if (urlStart === 'chrome' || urlStart === 'file:/')
-			a.onclick = function() {
-				openLink(node, newtab);
+		if (urlStart === 'chrome' || urlStart === 'file:/'){
+			a.onclick = function(e) {
+				openLink(node, newtab || (e.ctrlKey ? 2 : 0));
 				return false;
 			};
-
-	} else if (!node.children && !node.type)
+			a.onauxclick = function(e) {
+				if (e.button == 1) {
+					openLink(node, 2);
+					return false;
+				}
+			}
+		}
+	} else if (!node.children)
 		a.style.pointerEvents = 'none';
 
 	li.appendChild(a);
@@ -66,8 +70,8 @@ function render(node, target) {
 		addFolderHandlers(node, a);
 		enableDragFolder(node, a);
 
-	} else if (node.type)
-		addAppHandlers(node, a);
+	} else if (node.id == 'apps')
+		enableDragFolder(node, a);
 
 	target.appendChild(li);
 	return li;
@@ -214,136 +218,6 @@ function addFolderHandlers(node, a) {
 	};
 }
 
-// enables click and context menu for given app
-function addAppHandlers(node, a) {
-	if (!node.appLaunchUrl && node.id) {
-		a.onclick = function() {
-			chrome.management.launchApp(node.id);
-			return false;
-		};
-	}
-	a.oncontextmenu = function (event) {
-		var menuItems = [];
-
-		if (node.appLaunchUrl) {
-			menuItems.push({
-				label: 'Open in new tab',
-				action: function () {
-					openLink(node, 1);
-				}
-			});
-		}
-		if (node.optionsUrl) {
-			menuItems.push({
-				label: 'Options',
-				action: function () {
-					window.location = node.optionsUrl;
-				}
-			});
-		}
-		if (node.homepageUrl) {
-			menuItems.push({
-				label: 'Open in Web Store',
-				action: function () {
-					window.location = node.homepageUrl;
-				}
-			});
-		}
-		if (node.mayDisable) {
-			menuItems.push({
-				label: 'Uninstall',
-				action: function () {
-					if (confirm('Uninstall "' + a.innerText + '"?'))
-						chrome.management.uninstall(node.id, chrome.tabs.reload);
-				}
-			});
-		}
-
-		if (menuItems.length) {
-			renderMenu(menuItems, event.pageX, event.pageY);
-			return false;
-		}
-	};
-
-	// enable drag and drop ordering of app. TODO refactor
-	a.draggable = true;
-	a.ondragstart = function(event) {
-		dragIds = [node.id];
-		event.stopPropagation();
-		event.dataTransfer.effectAllowed = 'move copy';
-		this.classList.add('dragstart');
-	};
-	a.ondragend = function(event) {
-		dragIds = null;
-		this.classList.remove('dragstart');
-		clearDropTarget();
-	};
-	var li = a.parentNode;
-	li.ondragover = function(event) {
-		event.preventDefault();
-		event.stopPropagation();
-		event.dataTransfer.dropEffect = 'move';
-		// highlight drop target
-		var target = event.target;
-		while (target && target.tagName != 'A')
-			target = target.parentNode;
-
-		if (target) {
-			clearDropTarget();
-			dropTarget = target;
-			var bordercss = 'solid 2px ' + getConfig('font_color');
-			if (isAbove(event.pageY, target)) {
-				target.style.borderBottom = bordercss;
-				target.style.margin = '0 0 -2px 0';
-			} else {
-				target.style.borderTop = bordercss;
-				target.style.margin = '-2px 0 0 0';
-			}
-		}
-		return false;
-	};
-
-	li.ondragleave = function(event) {
-		clearDropTarget();
-	};
-
-	li.ondrop = function(event) {
-		event.stopPropagation();
-
-		var target = event.target;
-		while (target && target.tagName != 'A')
-			target = target.parentNode;
-
-		if (!target)
-			return false;
-
-		// saves app order to local storage
-		var index = appsOrder.indexOf(node.id);
-		var oldIndex = appsOrder.indexOf(dragIds[0]);
-		if (index == -1 || oldIndex == -1)
-			return false;
-
-		if (isAbove(event.pageY, target))
-			index++;
-
-		if (oldIndex < index)
-			index--;
-
-		appsOrder.splice(oldIndex, 1);
-		appsOrder.splice(index, 0, dragIds[0]);
-
-		localStorage.setItem('apps.order', JSON.stringify(appsOrder));
-
-		// refresh
-		var parent = li.parentNode.parentNode;
-		parent.removeChild(li.parentNode);
-		getChildrenFunction({id: 'apps'})(function(result) {
-			renderAll(result, parent);
-		});
-		return false;
-	};
-}
-
 // enables context menu for given column
 function addColumnHandlers(index, ul) {
 	var items = [];
@@ -417,13 +291,6 @@ function getMenuItems(node) {
 			label: 'Clear browsing data',
 			action: function() {
 				openLink({ url: 'chrome://settings/clearBrowserData' }, 1);
-			}
-		});
-	if (node.id == 'apps')
-		items.push({
-			label: 'Manage apps',
-			action: function() {
-				openLink({ url: 'chrome://apps' }, 1);
 			}
 		});
 	if (node.id == 'devices')
@@ -720,12 +587,6 @@ function getChildrenFunction(node) {
 				else
 					callback([]);
 			};
-		case 'apps':
-			return function(callback) {
-				getApps(function(result) {
-					callback(result);
-				});
-			};
 		case 'recent':
 			return function(callback) {
 				chrome.bookmarks.getRecent(getConfig('number_recent'), function(result) {
@@ -771,7 +632,7 @@ function getSubTree(id, callback) {
 			callback([{ title: 'Most visited', id: 'top', children: true}]);
 			break;
 		case 'apps':
-			callback([{ title: 'Apps', id: 'apps', children: true }]);
+			callback([{ title: 'Apps', id: 'apps', url: 'chrome://apps' }]);
 			break;
 		case 'recent':
 			callback([{ title: 'Recent bookmarks', id: 'recent', children: true }]);
@@ -831,11 +692,11 @@ function getIcon(node) {
 				size = iconInfo.size;
 			}
 		}
-	} else if (node.icon)
+	} else if (node.icon) {
 		url = node.icon;
-	else if (node.url || node.appLaunchUrl) {
-		url = `/_favicon/?pageUrl=${encodeURIComponent(node.url || node.appLaunchUrl)}&size=16`;
-		url2x = `/_favicon/?pageUrl=${encodeURIComponent(node.url || node.appLaunchUrl)}&size=32`;
+	} else if (node.url) {
+		url = `/_favicon/?pageUrl=${encodeURIComponent(node.url)}&size=16`;
+		url2x = `/_favicon/?pageUrl=${encodeURIComponent(node.url)}&size=32`;
 	}
 
 	var icon = document.createElement(url ? 'img' : 'div');
@@ -943,7 +804,7 @@ function openLinks(node) {
 
 // opens given node
 function openLink(node, newtab) {
-	var url = node.url || node.appLaunchUrl;
+	var url = node.url;
 	if (url) {
 		chrome.tabs.getCurrent(function(tab) {
 			if (newtab)
@@ -957,7 +818,7 @@ function openLink(node, newtab) {
 var columns; // columns[x][y] = id
 var root; // root[] = id
 var coords; // coords[id] = {x:x, y:y}
-var special = ['top', 'apps', 'recent', 'closed', 'devices'];
+var special = ['apps', 'top', 'recent', 'closed', 'devices'];
 
 // ensure root folders are included
 function verifyColumns() {
@@ -1112,47 +973,6 @@ function addRow(id, xpos, ypos) {
 function removeRow(xpos, ypos) {
 	columns[xpos].splice(ypos, 1);
 	saveColumns();
-}
-
-var appsOrder;
-
-// gets apps
-function getApps(callback) {
-	chrome.management.getAll(function(result) {
-		result = result.filter(function(a) {
-			return a.enabled && a.type !== 'extension' && a.type !== 'theme' && a.isApp !== false &&
-				a.id !== 'nmmhkkegccagdldgiimedpiccmgmieda';// hide "Google Wallet Service"
-		});
-
-		result.push({
-			id: 'webstore',
-			name: 'Chrome Web Store',
-			appLaunchUrl: 'https://chrome.google.com/webstore',
-			icon: 'https://www.google.com/images/icons/product/chrome_web_store-32.png',
-			type: 'hosted_app'
-		});
-
-		// order apps
-		var order = appsOrder || JSON.parse(localStorage.getItem('apps.order')) || [];
-
-		result.sort(function (a, b) {
-			var diff = order.indexOf(a.id) - order.indexOf(b.id);
-			if (diff)
-				return diff;
-			else if (a.name < b.name)
-				return -1;
-			else if (a.name > b.name)
-				return 1;
-			else
-				return 0;
-		});
-
-		appsOrder = [];
-		for (var i = 0; i < result.length; i++)
-			appsOrder.push(result[i].id);
-
-		callback(result);
-	});
 }
 
 // get recently closed tabs
