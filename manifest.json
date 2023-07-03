@@ -24,6 +24,9 @@
 	"chrome_url_overrides": {
 		"newtab": "newtab.html"
 	},
+	"chrome_settings_overrides": {
+		"homepage": "newtab.html"
+	},
 	"options_ui": {
 		"page": "newtab.html?options",
 		"open_in_tab": true
