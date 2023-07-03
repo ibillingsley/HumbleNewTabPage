@@ -668,10 +668,16 @@ function getIcon(node) {
 		}
 	} else if (node.icon) {
 		url = node.icon;
-	} else if (node.url) {
+	} else if (node.url && iconProvider != 0) {
 		try {
 			var u = new URL(node.url);
-			if (iconProvider == 1) {
+			if (u.protocol === "about:") {
+				url = 'icons/apps.png';
+				url2x = 'icons/apps@2x.png';
+			} else if (u.protocol === "file:") {
+				url = 'icons/page.png';
+				url2x = 'icons/page@2x.png';
+			} else if (iconProvider == 1) {
 				url = u.origin + '/favicon.ico';
 			} else if (iconProvider == 2) {
 				url = 'https://t2.gstatic.com/faviconV2?url=' + u.origin + '&size=16&type=FAVICON&client=SOCIAL&fallback_opts=TYPE,SIZE,URL';
