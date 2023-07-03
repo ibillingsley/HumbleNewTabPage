@@ -1056,6 +1056,7 @@ function refreshClosed() {
 var config = {
 	font: 'Sans-serif',
 	font_size: 16,
+	font_weight: 400,
 	theme: 'Default',
 	font_color: '#555555',
 	background_color: '#ffffff',
@@ -1227,6 +1228,8 @@ function getStyle(key, value) {
 			return '#main a { font-family: "' + value + '"; }';
 		case 'font_size':
 			return '#main a { font-size: ' + (value / 10) + 'em; }';
+		case 'font_weight':
+			return '#main a { font-weight: ' + value + '; }';
 		case 'font_color':
 			return '#main a { color: ' + value + '; }';
 		case 'background_color':
