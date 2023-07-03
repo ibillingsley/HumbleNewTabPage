@@ -35,6 +35,13 @@ This project is licensed under the **MIT License**, see [LICENSE_MIT.txt](LICENS
 Changelog
 ---------
 
+### Version 1.26 - July 2, 2023
+
+- Added font-weight option
+- (Chrome) Replaced Apps folder with a link to chrome://apps
+- (Firefox) Set home page to new tab page (change in Firefox settings)
+- (Firefox) Updated Google favicon provider
+
 ### Version 1.25 - March 11, 2023
 
 - Manifest V3

@@ -36,20 +36,26 @@ function render(node, target) {
 			a.target = '_blank';
 		} else if (newtab == 2) {
 			// new background tab
-			a.onclick = function(event) {
-				chrome.tabs.create({url: url, active: false});
-				return false;
-			};
-		}
-		// fix opening chrome:// and file:/// urls
-		var urlStart = url.substring(0, 6);
-		if (urlStart === 'chrome' || urlStart === 'file:/')
-			a.onclick = function() {
+			a.onclick = function(e) {
 				openLink(node, newtab);
 				return false;
 			};
-
-	} else if (!node.children && !node.type)
+		}
+		// fix opening about: and file:/// urls
+		var urlStart = url.substring(0, 6);
+		if (urlStart === 'about:' || urlStart === 'file:/'){
+			a.onclick = function(e) {
+				openLink(node, newtab || (e.ctrlKey ? 2 : 0));
+				return false;
+			};
+			a.onauxclick = function(e) {
+				if (e.button == 1) {
+					openLink(node, 2);
+					return false;
+				}
+			}
+		}
+	} else if (!node.children)
 		a.style.pointerEvents = 'none';
 
 	li.appendChild(a);
@@ -68,7 +74,6 @@ function render(node, target) {
 		// click handlers
 		addFolderHandlers(node, a);
 		enableDragFolder(node, a);
-
 	}
 
 	target.appendChild(li);
@@ -1017,6 +1022,7 @@ function refreshClosed() {
 var config = {
 	font: 'Sans-serif',
 	font_size: 16,
+	font_weight: 400,
 	theme: 'Default',
 	font_color: '#555555',
 	background_color: '#ffffff',
@@ -1187,6 +1193,8 @@ function getStyle(key, value) {
 			return '#main a { font-family: "' + value + '"; }';
 		case 'font_size':
 			return '#main a { font-size: ' + (value / 10) + 'em; }';
+		case 'font_weight':
+			return '#main a { font-weight: ' + value + '; }';
 		case 'font_color':
 			return '#main a { color: ' + value + '; }';
 		case 'background_color':

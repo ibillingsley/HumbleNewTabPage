@@ -1,7 +1,7 @@
 {
 	"name": "HNTP",
 	"short_name": "HNTP",
-	"version": "1.25",
+	"version": "1.26",
 	"manifest_version": 3,
 	"browser_specific_settings": {
 		"gecko": {

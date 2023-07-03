@@ -286,9 +286,6 @@ input[type="file"]::-webkit-file-upload-button {
 .top .icon {
 	background-image: -webkit-image-set(url("icons/top.png") 1x, url("icons/top@2x.png") 2x);
 }
-.apps .icon {
-	background-image: -webkit-image-set(url("icons/apps.png") 1x, url("icons/apps@2x.png") 2x);
-}
 .closed .icon {
 	background-image: -webkit-image-set(url("icons/closed.png") 1x, url("icons/closed@2x.png") 2x);
 }
