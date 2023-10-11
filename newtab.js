@@ -82,9 +82,12 @@ function renderAll(nodes, target, toplevel) {
 	var ul = document.createElement('ul');
 	for (var i = 0; i < nodes.length; i++) {
 		var node = nodes[i];
-		// skip extensions and duplicated child folders
-		if (toplevel || !coords[node.id])
+		// skip extensions, duplicated child folders and duplicated urls if needed
+		if ((toplevel || !coords[node.id]) && (!getConfig('hide_dupes') || !displayedUrlsList.includes(node.url))) {
+			if (node.url)
+				displayedUrlsList.push(node.url);
 			render(node, ul);
+		}
 	}
 	if (ul.childNodes.length === 0)
 		render({ id: 'empty', title: '< Empty >' }, ul);
@@ -713,6 +716,13 @@ function toggle(node, a) {
 	setClass(a, node, !isopen);
 	a.open = !isopen;
 	if (isopen) {
+		//remove children from displayed urls
+		for (var i=0; i<node.children.length; i++) {
+			var removeIndex = displayedUrlsList.indexOf(node.children[i].url);
+			if (removeIndex !== -1)
+				displayedUrlsList.splice(removeIndex, 1);
+		}
+
 		// close folder
 		localStorage.removeItem('open.' + node.id);
 		if (a.nextSibling){
@@ -862,6 +872,7 @@ function verifyColumns() {
 
 // load columns from storage or default
 function loadColumns() {
+	displayedUrlsList = [];
 	columns = [];
 	for (var x = 0; ; x++) {
 		var row = [];
@@ -1084,6 +1095,7 @@ var config = {
 	show_closed: 1,
 	show_devices: 1,
 	show_root: 0,
+	hide_dupes: 0,
 	newtab: 0,
 	remember_open: 1,
 	auto_close: 0,
@@ -1195,7 +1207,7 @@ function setConfig(key, value) {
 		value = (theme.hasOwnProperty(key) ? theme[key] : config[key]);
 	}
 	// special case settings
-	if (key == 'lock' || key == 'newtab' || key == 'show_root' || key.substring(0,6) == 'number')
+	if (key == 'lock' || key == 'newtab' || key == 'show_root' || key == 'hide_dupes' || key.substring(0,6) == 'number')
 		loadColumns();
 	else if (key == 'theme') {
 		theme = themes[value];
@@ -1575,6 +1587,8 @@ function showOptions(show) {
 			showConfig(key);
 	}
 }
+
+var displayedUrlsList = [];
 
 // initialize page
 loadSettings();
