@@ -35,6 +35,10 @@ This project is licensed under the **MIT License**, see [LICENSE_MIT.txt](LICENS
 Changelog
 ---------
 
+### Version 1.27 - October 11, 2023
+
+- Added Option to hide duplicate links
+
 ### Version 1.26 - July 2, 2023
 
 - Added font-weight option
