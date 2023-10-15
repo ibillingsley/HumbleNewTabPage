@@ -35,6 +35,11 @@ This project is licensed under the **MIT License**, see [LICENSE_MIT.txt](LICENS
 Changelog
 ---------
 
+### Version 1.26.1 - October 15, 2023
+
+- (Chrome) Fixed navigating to file:/// URLs (enable "Allow access to file URLs" in Manage Extensions > Details)
+- (Vivaldi) Hide bookmark separators
+
 ### Version 1.26 - July 2, 2023
 
 - Added font-weight option
