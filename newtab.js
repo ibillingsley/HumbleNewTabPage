@@ -2,6 +2,8 @@
 
 // render a single bookmark node
 function render(node, target) {
+	if (node.description == 'separator') return;
+
 	var li = document.createElement('li');
 	var a = document.createElement('a');
 
