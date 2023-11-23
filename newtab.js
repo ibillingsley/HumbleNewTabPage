@@ -1030,8 +1030,8 @@ var config = {
 	font_size: 16,
 	font_weight: 400,
 	theme: 'Default',
-	night_theme: 'Default',
-	theme_mode: 100,
+	dark_theme: 'Default',
+	theme_mode: 'light',
 	font_color: '#555555',
 	background_color: '#ffffff',
 	highlight_color: '#e4f4ff',
@@ -1112,7 +1112,7 @@ var themes = {
 		highlight_font_color: '#ffff80',
 		shadow_color: '#ff80c0'
 	},
-	Midnight: {
+	Middark: {
 		font_color: '#bfdfff',
 		background_color: '#101827',
 		highlight_color: '#000000',
@@ -1148,7 +1148,7 @@ var themes = {
 		shadow_color: '#d98764'
 	}
 };
-var theme = {};
+var theme = themes['Default']; // default theme
 
 // get config value or default
 function getConfig(key) {
@@ -1157,6 +1157,22 @@ function getConfig(key) {
 		return typeof config[key] === 'number' ? Number(value) : value;
 	else
 		return (theme.hasOwnProperty(key) ? theme[key] : config[key]);
+}
+
+// check if dark theme should be used
+function isDarkTheme() {
+	// get theme mode
+	var themeMode = getConfig('theme_mode') || 'light';
+	return (
+		(themeMode === 'auto' && window.matchMedia("(prefers-color-scheme: dark)")) 
+		|| themeMode === 'dark'
+	);
+}
+
+// retrieve the current theme
+function loadActiveTheme() {
+	var modifier = isDarkTheme() ? 'dark_' : '';
+	return themes[getConfig(modifier + 'theme')] || themes['Default'];
 }
 
 // set config value
@@ -1170,7 +1186,21 @@ function setConfig(key, value) {
 	// special case settings
 	if (key == 'lock' || key == 'newtab' || key == 'show_root' || key == 'icon_provider' || key.substring(0,6) == 'number')
 		loadColumns();
-	else if (key == 'theme') {
+	// TODO(clean-up): remove this duplication
+	else if (key == 'theme_mode') {
+		theme = loadActiveTheme();
+		for (var i in config) {
+			if (i != key) {
+				onChange(i);
+				showConfig(i);
+			}
+		}
+	}
+	else if (
+		(key == 'theme' && !isDarkTheme())
+		||
+		(key == 'dark_theme' && isDarkTheme())
+	 ) {
 		theme = themes[value];
 		for (var i in config) {
 			if (i != key) {
@@ -1329,7 +1359,7 @@ function onChange(key, value) {
 // loads config settings
 function loadSettings() {
 	// load theme
-	theme = themes[getConfig('theme')] || {};
+	theme = loadActiveTheme()
 	// load settings
 	for (var key in config)
 		if (key === 'background_image_file')
@@ -1507,15 +1537,18 @@ function initSettings() {
 
 		loadSettings();
 
-		// load themes
-		var select = document.getElementById('options_theme');
-		if (select.childNodes.length === 0) {
-			for (var i in themes) {
-				var option = document.createElement('option');
-				option.innerText = i;
-				if (i == getConfig('theme'))
-					option.selected = 'selected';
-				select.appendChild(option);
+		// load day & dark themes
+		var optionKeys = ['theme', 'dark_theme'];
+		for (var optionKey of optionKeys) {
+			var select = document.getElementById('options_' + optionKey);
+			if (select.childNodes.length === 0) {
+				for (var i in themes) {
+					var option = document.createElement('option');
+					option.innerText = i;
+					if (i == getConfig(optionKey))
+						option.selected = 'selected';
+					select.appendChild(option);
+				}
 			}
 		}
 
