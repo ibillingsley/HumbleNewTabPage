@@ -1161,7 +1161,6 @@ function getConfig(key) {
 
 // check if dark theme should be used
 function isDarkTheme() {
-	// get theme mode
 	var themeMode = getConfig('theme_mode') || 'light';
 	var systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 	return ((themeMode === 'auto' && systemPrefersDark) || themeMode === 'dark');
@@ -1184,22 +1183,12 @@ function setConfig(key, value) {
 	// special case settings
 	if (key == 'lock' || key == 'newtab' || key == 'show_root' || key == 'icon_provider' || key.substring(0,6) == 'number')
 		loadColumns();
-	// TODO(clean-up): remove this duplication
-	else if (key == 'theme_mode') {
-		theme = loadActiveTheme();
-		for (var i in config) {
-			if (i != key) {
-				onChange(i);
-				showConfig(i);
-			}
-		}
-	}
 	else if (
-		(key == 'theme' && !isDarkTheme())
-		||
-		(key == 'dark_theme' && isDarkTheme())
+		(key == 'theme_mode')
+		|| (key == 'theme' && !isDarkTheme())
+		|| (key == 'dark_theme' && isDarkTheme())
 	 ) {
-		theme = themes[value];
+		theme = (key == 'theme_mode') ? loadActiveTheme() : themes[value];
 		for (var i in config) {
 			if (i != key) {
 				onChange(i);
