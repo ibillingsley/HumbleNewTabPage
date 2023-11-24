@@ -1194,6 +1194,7 @@ function getConfig(key) {
 function isDarkTheme() {
 	// get theme mode
 	var themeMode = getConfig('theme_mode') || 'light';
+	// FIXME: here `window.matchMedia` evaluates to window query and not BOOL
 	return (
 		(themeMode === 'auto' && window.matchMedia("(prefers-color-scheme: dark)")) 
 		|| themeMode === 'dark'
