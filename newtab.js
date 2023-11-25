@@ -1112,7 +1112,7 @@ var themes = {
 		highlight_font_color: '#ffff80',
 		shadow_color: '#ff80c0'
 	},
-	Middark: {
+	Midnight: {
 		font_color: '#bfdfff',
 		background_color: '#101827',
 		highlight_color: '#000000',
