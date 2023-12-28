@@ -692,6 +692,8 @@ function getIcon(node) {
 			} else if (iconProvider == 6) {
 				url = 'https://favicon.yandex.net/favicon/v2/' + u.hostname + '?size=16';
 				url2x = 'https://favicon.yandex.net/favicon/v2/' + u.hostname + '?size=32';
+			} else if (iconProvider == 7) {
+				url = 'https://icon.horse/icon/' + u.hostname; 
 			}
 		} catch (e) {
 			console.error(e);
