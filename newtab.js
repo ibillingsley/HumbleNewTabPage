@@ -688,10 +688,12 @@ function getIcon(node) {
 			} else if (iconProvider == 4) {
 				url = 'https://external-content.duckduckgo.com/ip3/' + u.hostname + '.ico';
 			} else if (iconProvider == 5) {
-				url = 'https://icon.horse/icon/' + u.hostname.replace(/^www\./, ''); 
+				url = 'https://api.ecosia.org/v2/favicons/fetch?domain=' + u.origin;
 			} else if (iconProvider == 6) {
 				url = 'https://favicon.yandex.net/favicon/v2/' + u.hostname + '?size=16';
 				url2x = 'https://favicon.yandex.net/favicon/v2/' + u.hostname + '?size=32';
+			} else if (iconProvider == 7) {
+				url = 'https://icon.horse/icon/' + u.hostname.replace(/^www\./, ''); 
 			}
 		} catch (e) {
 			console.error(e);
