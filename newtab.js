@@ -683,8 +683,7 @@ function getIcon(node) {
 				url = 'https://t2.gstatic.com/faviconV2?url=' + u.origin + '&size=16&type=FAVICON&client=SOCIAL&fallback_opts=TYPE,SIZE,URL';
 				url2x = 'https://t2.gstatic.com/faviconV2?url=' + u.origin + '&size=32&type=FAVICON&client=SOCIAL&fallback_opts=TYPE,SIZE,URL';
 			} else if (iconProvider == 3) {
-				url = 'https://quintessential-jade-termite.faviconkit.com/' + u.hostname + '/16';
-				url2x = 'https://quintessential-jade-termite.faviconkit.com/' + u.hostname + '/32';
+				url = 'https://icon.horse/icon/' + u.hostname.replace(/^www\./, ''); 
 			} else if (iconProvider == 4) {
 				url = 'https://external-content.duckduckgo.com/ip3/' + u.hostname + '.ico';
 			} else if (iconProvider == 5) {
@@ -692,8 +691,6 @@ function getIcon(node) {
 			} else if (iconProvider == 6) {
 				url = 'https://favicon.yandex.net/favicon/v2/' + u.hostname + '?size=16';
 				url2x = 'https://favicon.yandex.net/favicon/v2/' + u.hostname + '?size=32';
-			} else if (iconProvider == 7) {
-				url = 'https://icon.horse/icon/' + u.hostname.replace(/^www\./, ''); 
 			}
 		} catch (e) {
 			console.error(e);
