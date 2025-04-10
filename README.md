@@ -35,6 +35,10 @@ This project is licensed under the **MIT License**, see [LICENSE_MIT.txt](LICENS
 Changelog
 ---------
 
+### Version 1.26.2 - April 9, 2025
+
+- (Firefox) Removed Favicon Kit and Qwant favicon providers, added Ecosia and Icon Horse
+
 ### Version 1.26.1 - October 15, 2023
 
 - (Chrome) Fixed navigating to file:/// URLs (enable "Allow access to file URLs" in Manage Extensions > Details)
