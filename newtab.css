@@ -119,6 +119,10 @@ body {
 .hide-focus :focus {
 	outline: none;
 }
+#main a:focus {
+	outline: 2px solid #0066CC;
+	outline-offset: 2px;
+}
 #options, #options_button {
 	position: absolute;
 	top: 0;

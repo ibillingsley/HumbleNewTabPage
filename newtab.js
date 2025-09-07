@@ -24,6 +24,9 @@ function render(node, target) {
 
 	if (node.action) {
 		a.onclick = function(event) {
+			if (selectedElement) {
+				selectElement(null);
+			}
 			return node.action(event);
 		};
 	} else if (url) {
@@ -34,19 +37,35 @@ function render(node, target) {
 		} else if (newtab == 2) {
 			// new background tab
 			a.onclick = function(e) {
+				if (selectedElement) {
+					selectElement(null);
+				}
 				openLink(node, newtab);
 				return false;
+			};
+		} else {
+			// current tab or default behavior
+			a.onclick = function(e) {
+				if (selectedElement) {
+					selectElement(null);
+				}
 			};
 		}
 		// fix opening chrome:// and file:/// urls
 		var urlStart = url.substring(0, 6);
 		if (urlStart === 'chrome' || urlStart === 'file:/'){
 			a.onclick = function(e) {
+				if (selectedElement) {
+					selectElement(null);
+				}
 				openLink(node, newtab || (e.ctrlKey ? 2 : 0));
 				return false;
 			};
 			a.onauxclick = function(e) {
 				if (e.button == 1) {
+					if (selectedElement) {
+						selectElement(null);
+					}
 					openLink(node, 2);
 					return false;
 				}
@@ -157,6 +176,9 @@ function renderColumns() {
 function addFolderHandlers(node, a) {
 	// click handler
 	a.onclick = function() {
+		if (selectedElement) {
+			selectElement(null);
+		}
 		toggle(node, a, getChildrenFunction(node));
 		return false;
 	};
@@ -1583,14 +1605,128 @@ loadSettings();
 loadColumns();
 
 // keyboard shortcuts
+var selectedElement = null;
+
+function selectElement(element) {
+	selectedElement = element;
+	if (selectedElement) {
+		selectedElement.focus();
+	}
+}
+
+function getNavigableElements() {
+	return Array.from(document.querySelectorAll('#main a:not(.empty)'));
+}
+
+function navigateToNext() {
+	var elements = getNavigableElements();
+	if (elements.length === 0) return;
+	
+	if (!selectedElement) {
+		selectElement(elements[0]);
+		return;
+	}
+	
+	var currentIndex = elements.indexOf(selectedElement);
+	if (currentIndex < elements.length - 1) {
+		selectElement(elements[currentIndex + 1]);
+	}
+}
+
+function navigateToPrevious() {
+	var elements = getNavigableElements();
+	if (elements.length === 0) return;
+	
+	if (!selectedElement) {
+		selectElement(elements[elements.length - 1]);
+		return;
+	}
+	
+	var currentIndex = elements.indexOf(selectedElement);
+	if (currentIndex > 0) {
+		selectElement(elements[currentIndex - 1]);
+	}
+}
+
+function navigateLeft() {
+	if (!selectedElement) return;
+	
+	var currentColumn = selectedElement.closest('.column');
+	var prevColumn = currentColumn.previousElementSibling;
+	
+	if (prevColumn) {
+		var elementsInPrevColumn = Array.from(prevColumn.querySelectorAll('a:not(.empty)'));
+		if (elementsInPrevColumn.length > 0) {
+			selectElement(elementsInPrevColumn[0]);
+		}
+	}
+}
+
+function navigateRight() {
+	if (!selectedElement) return;
+	
+	var currentColumn = selectedElement.closest('.column');
+	var nextColumn = currentColumn.nextElementSibling;
+	
+	if (nextColumn) {
+		var elementsInNextColumn = Array.from(nextColumn.querySelectorAll('a:not(.empty)'));
+		if (elementsInNextColumn.length > 0) {
+			selectElement(elementsInNextColumn[0]);
+		}
+	}
+}
+
 document.addEventListener('keypress', function(event) {
 	if (event.keyCode == 13 && event.target && event.target.onclick && event.target.tagName == 'A') {
 		event.target.dispatchEvent(new MouseEvent('click'));
 		event.preventDefault();
 	}
 });
+
+document.addEventListener('keydown', function(event) {
+	// Ignore key navigation when options panel is open
+	if (document.getElementById('options').style.display === 'block') {
+		return;
+	}
+	
+	switch(event.keyCode) {
+		case 38: // up arrow
+			navigateToPrevious();
+			event.preventDefault();
+			break;
+		case 40: // down arrow
+			navigateToNext();
+			event.preventDefault();
+			break;
+		case 37: // left arrow
+			navigateLeft();
+			event.preventDefault();
+			break;
+		case 39: // right arrow
+			navigateRight();
+			event.preventDefault();
+			break;
+		case 13: // enter
+			if (selectedElement && selectedElement.onclick) {
+				selectedElement.dispatchEvent(new MouseEvent('click'));
+				event.preventDefault();
+			} else if (selectedElement && selectedElement.href) {
+				selectedElement.click();
+				event.preventDefault();
+			}
+			break;
+		case 27: // ekscape
+			selectElement(null);
+			event.preventDefault();
+			break;
+	}
+});
 document.addEventListener('mousedown', function(event) {
 	document.body.classList.add('hide-focus');
+	// clear keyboard selection when user clicks
+	if (selectedElement && !event.target.closest('a')) {
+		selectElement(null);
+	}
 });
 document.addEventListener('keydown', function(event) {
 	document.body.classList.remove('hide-focus');
