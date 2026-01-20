@@ -5,6 +5,11 @@
 <title>New Tab</title>
 <link rel="stylesheet" href="newtab.css">
 <link rel="icon" href="icons/icon_16.png">
+<script src="themes.js"></script>
+<script src="prevent-white-flash.js"></script>
+<script src="bookmark-cache.js" defer></script>
+<script src="newtab.js" defer></script>
+<script src="favicon.js" defer></script>
 </head>
 <body>
 <div id="main">
@@ -34,7 +39,6 @@
 	</fieldset>
 	<fieldset>
 		<legend>Content</legend>
-		<label><span>Apps</span><input id="options_show_apps" type="checkbox"/></label>
 		<div id="options_show_bookmarks"></div>
 		<label><span>Most visited</span><input id="options_show_top" type="checkbox"/></label>
 		<label class="subopt"><span>Number of items</span><input id="options_number_top" type="number" min="1" max="10"/></label>
@@ -43,6 +47,10 @@
 		<label><span>Recently closed</span><input id="options_show_closed" type="checkbox"/></label>
 		<label class="subopt"><span>Number of items</span><input id="options_number_closed" type="number" min="1" max="25"/></label>
 		<label><span>Other devices</span><input id="options_show_devices" type="checkbox"/></label>
+	</fieldset>
+	<fieldset id="firefox_options" style="display:none">
+		<legend>Firefox</legend>
+		<label><span>Favicon provider</span><select id="options_favicon_provider"></select></label>
 	</fieldset>
 	</div><div class="section">
 	<fieldset>
@@ -135,6 +143,5 @@
 	</fieldset>
 	</div>
 </div>
-<script src="newtab.js"></script>
 </body>
 </html>

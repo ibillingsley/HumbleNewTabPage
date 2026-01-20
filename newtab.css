@@ -3,11 +3,13 @@ body {
 	background-attachment: fixed;
 	background-position: left top;
 	width: 100vw;
-	margin: 0 auto;
+	margin-inline: auto; /* Modern logical property */
 	overflow-x: hidden;
 	font-family: sans-serif;
 	font-size: 62.5%;
 	line-height: 1;
+	text-rendering: optimizeSpeed;
+	font-synthesis: none;
 }
 #main {
 	width: 80%;
@@ -16,11 +18,16 @@ body {
 	max-width: 100%;
 	white-space: nowrap;
 	user-select: none;
+	touch-action: manipulation;
 }
 #main ul, .menu {
 	margin: 0;
 	padding: 0;
 	list-style: none;
+}
+#main > .column > ul > li > ul {
+	content-visibility: auto;
+	contain-intrinsic-size: auto 500px;
 }
 #main a + ul, #main a + div {
 	padding-left: 24px;
@@ -35,12 +42,11 @@ body {
 	line-height: 2;
 	text-decoration: none;
 	color: #555;
-	padding: 0 .8em;
+	padding-inline: .8em; /* Modern logical property */
 	border-radius: .2em;
 	cursor: pointer;
-	transition-property: color, background-color, box-shadow, opacity;
-	transition-duration: 0.2s;
-	transition-timing-function: ease-out;
+	/* Use shorthand transition property */
+	transition: color 0.2s ease-out, background-color 0.2s ease-out, box-shadow 0.2s ease-out, opacity 0.2s ease-out;
 }
 #main a:hover {
 	color: #000;
@@ -50,22 +56,20 @@ body {
 .icon {
 	display: inline-block;
 	width: 16px;
-	height: 16px;
+	aspect-ratio: 1; /* Modern way to maintain square aspect ratio */
 	margin: -3px .4em 0 0;
 	background-size: 100% 100%;
 	vertical-align: middle;
-}
-#main a:after {
-	/* workaround Chromium issue 142154 */
-	content: '';
-	display: inline-block;
-	width: 2px;
-	margin-left: -2px;
+	pointer-events: none;
 }
 .wrap {
 	transition-property: height, opacity;
 	transition-duration: 0.2s;
 	transition-timing-function: ease-out;
+	will-change: height, opacity;
+	transform: translateZ(0);
+	backface-visibility: hidden;
+	overflow: hidden;
 }
 .column {
 	display: inline-block;
@@ -73,6 +77,8 @@ body {
 	box-sizing: border-box;
 	padding: 10px 0 20px 0;
 	min-height: 300px;
+	contain: layout style;
+	isolation: isolate;
 }
 #main .empty {
 	opacity: 0.5;
@@ -262,7 +268,7 @@ input[type="file"]::-webkit-file-upload-button {
 	width: 18px;
 	height: 16px;
 	opacity: .5;
-	background-image: -webkit-image-set(url("icons/revert.png") 1x, url("icons/revert@2x.png") 2x);
+	background-image: image-set(url("icons/revert.png") 1x, url("icons/revert@2x.png") 2x);
 	background-size: 100%;
 	cursor: pointer;
 }
@@ -270,10 +276,10 @@ input[type="file"]::-webkit-file-upload-button {
 	opacity: 1;
 }
 .folder .icon {
-	background-image: -webkit-image-set(url("icons/folder.png") 1x, url("icons/folder@2x.png") 2x);
+	background-image: image-set(url("icons/folder.png") 1x, url("icons/folder@2x.png") 2x);
 }
 .open .icon {
-	background-image: -webkit-image-set(url("icons/folder_open.png") 1x, url("icons/folder_open@2x.png") 2x);
+	background-image: image-set(url("icons/folder_open.png") 1x, url("icons/folder_open@2x.png") 2x);
 }
 .empty .icon {
 	display: none;
@@ -281,23 +287,49 @@ input[type="file"]::-webkit-file-upload-button {
 /* The following icons are copyright (c) 2012 The Chromium Authors.
    see LICENSE_chromium_BSD.txt */
 .recent .icon {
-	background-image: -webkit-image-set(url("icons/recent.png") 1x, url("icons/recent@2x.png") 2x);
+	background-image: image-set(url("icons/recent.png") 1x, url("icons/recent@2x.png") 2x);
 }
 .top .icon {
-	background-image: -webkit-image-set(url("icons/top.png") 1x, url("icons/top@2x.png") 2x);
+	background-image: image-set(url("icons/top.png") 1x, url("icons/top@2x.png") 2x);
 }
 .closed .icon {
-	background-image: -webkit-image-set(url("icons/closed.png") 1x, url("icons/closed@2x.png") 2x);
+	background-image: image-set(url("icons/closed.png") 1x, url("icons/closed@2x.png") 2x);
 }
 .window .icon {
-	background-image: -webkit-image-set(url("icons/window.png") 1x, url("icons/window@2x.png") 2x);
+	background-image: image-set(url("icons/window.png") 1x, url("icons/window@2x.png") 2x);
 }
 .devices .icon {
-	background-image: -webkit-image-set(url("icons/phone.png") 1x, url("icons/phone@2x.png") 2x);
+	background-image: image-set(url("icons/phone.png") 1x, url("icons/phone@2x.png") 2x);
 }
 .error .icon {
-	background-image: -webkit-image-set(url("icons/error.png") 1x, url("icons/error@2x.png") 2x);
+	background-image: image-set(url("icons/error.png") 1x, url("icons/error@2x.png") 2x);
 }
 #options_button {
-	background-image: -webkit-image-set(url("icons/options.png") 1x, url("icons/options@2x.png") 2x);
+	background-image: image-set(url("icons/options.png") 1x, url("icons/options@2x.png") 2x);
+}
+
+/* Cache error message */
+.cache-error {
+	font-size: 1.6em;
+	color: #555;
+	padding: 2em;
+	max-width: 600px;
+	margin: 0 auto;
+}
+.cache-error h2 {
+	color: #c00;
+	margin-bottom: 1em;
+}
+.cache-error ul {
+	margin: 1em 0;
+	padding-left: 2em;
+}
+.cache-error li {
+	margin: 0.5em 0;
+}
+.cache-error button {
+	margin-top: 1em;
+	padding: 0.5em 1.5em;
+	font-size: 1em;
+	cursor: pointer;
 }

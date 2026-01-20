@@ -1,1581 +1,1624 @@
 'use strict';
 
+// Tab open mode enum
+const TAB_OPEN_MODE = Object.freeze({
+    CURRENT: 0,
+    FOREGROUND: 1,
+    BACKGROUND: 2
+});
+
+// =============================================================================
+// SPECIAL FOLDERS - Unified handling for top sites, recent, closed, devices
+// =============================================================================
+
+const SpecialFolders = {
+    // Definition of all special folders with their properties
+    defs: {
+        top: {title: 'Most visited', isFolder: true, configKey: 'number_top'},
+        recent: {title: 'Recent bookmarks', isFolder: true, configKey: 'number_recent'},
+        closed: {title: 'Recently closed', isFolder: true, configKey: 'number_closed'},
+        devices: {title: 'Other devices', isFolder: true, configKey: 'number_closed'}
+    },
+
+    // All special IDs (for iteration)
+    all: ['top', 'recent', 'closed', 'devices'],
+
+    // Pre-computed Set for O(1) lookups (all special folders are also folders)
+    _specialSet: new Set(['top', 'recent', 'closed', 'devices']),
+
+    // Check if an ID is a special folder (O(1) Set lookup)
+    isSpecial(id) {
+        return this._specialSet.has(id);
+    },
+
+    // Get node definition for rendering
+    getNode(id) {
+        const def = this.defs[id];
+        if (!def) return null;
+        return {
+            id,
+            title: def.title,
+            url: def.url,
+            children: def.isFolder ? true : undefined
+        };
+    },
+
+    // Fetch children data for a special folder
+    // ONLY reads from IndexedDB cache - no Chrome API fallback
+    // Exception: 'top' sites must be fetched here (SW can't access chrome.topSites)
+    async fetchChildrenOfSpecialFolder(id) {
+        const def = this.defs[id];
+        if (!def?.isFolder) return [];
+        const limit = getConfig(def.configKey);
+
+        // 'top' is special - SW can't cache it, so we fetch and cache here
+        if (id === 'top') {
+            return this._fetchTopSites(limit);
+        }
+
+        // All other special folders: read from cache only, no API fallback
+        const cached = await BookmarkCache.getSpecialFolder(id);
+        if (cached?.data) {
+            return this._hydrateData(id, cached.data.slice(0, limit));
+        }
+
+        // Cache miss - return empty, don't call Chrome APIs
+        return [];
+    },
+
+    // Fetch top sites (only special folder that newtab.js fetches directly)
+    async _fetchTopSites(limit) {
+        // Try cache first
+        const cached = await BookmarkCache.getSpecialFolder('top');
+        if (cached?.fresh) {
+            return cached.data.slice(0, limit);
+        }
+
+        // Cache miss or stale - fetch from API (only for 'top')
+        if (!chrome.topSites) return [];
+
+        const freshData = await chrome.topSites.get().then(r => r || []);
+
+        // Cache for next time
+        BookmarkCache.setSpecialFolder('top', freshData).catch(e =>
+            console.warn(`[SpecialFolders] Failed to cache top:`, e));
+
+        return freshData.slice(0, limit);
+    },
+
+    // Hydrate cached data with runtime properties (action callbacks, className)
+    _hydrateData(id, data) {
+        if (id === 'closed') {
+            const len = data.length;
+            const result = new Array(len);
+            for (let i = 0; i < len; i++) {
+                const item = data[i];
+                result[i] = {
+                    ...item,
+                    className: item.isWindow ? 'window' : null,
+                    action: () => {
+                        chrome.sessions.restore(item.sessionId);
+                        refreshClosed();
+                        return false;
+                    }
+                };
+            }
+            return result;
+        }
+        // 'top', 'recent', 'devices' don't need hydration
+        return data;
+    }
+};
+
+// Convenience references
+const special = SpecialFolders.all;
+const specialFolderIds = [];
+for (let i = 0, len = special.length; i < len; i++) {
+    const id = special[i];
+    if (SpecialFolders.isSpecial(id)) specialFolderIds.push(id);
+}
+
+// =============================================================================
+// BOOKMARK LOADING - Load from IndexedDB cache (populated by service worker)
+// =============================================================================
+
+// Cache loading state
+let cacheLoadError = null;
+let cacheStatus = null;
+
+/**
+ * Check if the bookmark cache is available and valid
+ * @returns {Promise<{valid: boolean, lastSync: number|null, version: number|null}>}
+ */
+async function checkCacheStatus() {
+    if (cacheStatus) return cacheStatus;
+    try {
+        cacheStatus = await BookmarkCache.getCacheStatus();
+        return cacheStatus;
+    } catch (e) {
+        cacheLoadError = e;
+        return {valid: false, lastSync: null, version: null};
+    }
+}
+
+/**
+ * Get root folder IDs from cache
+ * @returns {Promise<string[]>}
+ */
+async function getRootFolderIds() {
+    const folder = await BookmarkCache.getFolder('0');
+    if (!folder || !folder.children) return [];
+    const children = folder.children;
+    const len = children.length;
+    const result = [];
+    for (let i = 0; i < len; i++) {
+        const c = children[i];
+        if (c.isFolder) result.push(c.id);
+    }
+    return result;
+}
+
+// Iterate over column storage entries, calling fn(x, y, id) for each
+// If fn returns false, stop iteration.
+function forEachColumnEntry(fn) {
+    for (let x = 0; ; x++) {
+        let foundInRow = false;
+        for (let y = 0; ; y++) {
+            const id = localStorage.getItem(`column.${x}.${y}`);
+            if (id) {
+                foundInRow = true;
+                if (fn(x, y, id) === false) return;
+            } else {
+                break;
+            }
+        }
+        if (!foundInRow) break;
+    }
+}
+
+// Get children for a folder (works for both regular and special folders)
+// Uses BookmarkCache's in-memory cache for regular bookmarks (fast after loadAllData)
+async function getChildren_internal(id) {
+    // Special folders use Chrome APIs (fetched fresh each time)
+    if (SpecialFolders.isSpecial(id)) {
+        return SpecialFolders.fetchChildrenOfSpecialFolder(id);
+    }
+
+    // Regular bookmarks: load from BookmarkCache (uses in-memory cache)
+    let children = [];
+    try {
+        const folder = await BookmarkCache.getFolder(id);
+        children = folder ? folder.children : [];
+    } catch (e) {
+        console.error(`[BookmarkCache] Error loading folder ${id}:`, e);
+        cacheLoadError = e;
+    }
+
+    for (let i = 0, len = children.length; i < len; i++) {
+        if (children[i].isFolder) children[i].children = true;
+    }
+    return children;
+}
+
+// Get node metadata (uses BookmarkCache's in-memory cache)
+async function getNode_internal(id) {
+    const folder = await BookmarkCache.getFolder(id);
+    if (folder) {
+        return {id: folder.id, title: folder.title, parentId: folder.parentId};
+    }
+    return null;
+}
+
 // render a single bookmark node
 function render(node, target) {
-	if (node.description == 'separator') return;
+    if (node.description === 'separator') return;
 
-	var li = document.createElement('li');
-	var a = document.createElement('a');
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    const {url, children, id} = node;
 
-	var url = node.url;
-	if (url)
-		a.href = url;
-	else
-		a.tabIndex = 0;
+    if (url) {
+        a.href = url;
+    } else {
+        a.tabIndex = 0;
+    }
 
-	var text = node.title || node.name || '';
-	if (!text && node.title === null) text = node.url || '';
-	a.innerText = text;
+    a.textContent = node.title ?? node.name ?? url ?? '';
 
-	if (node.tooltip) a.title = node.tooltip;
-	setClass(a, node);
+    if (node.tooltip) a.title = node.tooltip;
+    setClass(a, node);
+    a.prepend(getIcon(node)); // Modern API, cleaner than insertBefore
 
-	a.insertBefore(getIcon(node), a.firstChild);
+    // Cache newtab config outside conditionals to avoid repeated lookups
+    const newtab = url ? getConfig('newtab') : 0;
 
-	if (node.action) {
-		a.onclick = function(event) {
-			return node.action(event);
-		};
-	} else if (url) {
-		var newtab = getConfig('newtab');
-		if (newtab == 1) {
-			// new foreground tab
-			a.target = '_blank';
-		} else if (newtab == 2) {
-			// new background tab
-			a.onclick = function(e) {
-				openLink(node, newtab);
-				return false;
-			};
-		}
-		// fix opening chrome:// and file:/// urls
-		var urlStart = url.substring(0, 6);
-		if (urlStart === 'chrome' || urlStart === 'file:/'){
-			a.onclick = function(e) {
-				openLink(node, newtab || (e.ctrlKey ? 2 : 0));
-				return false;
-			};
-			a.onauxclick = function(e) {
-				if (e.button == 1) {
-					openLink(node, 2);
-					return false;
-				}
-			}
-		}
-	} else if (!node.children)
-		a.style.pointerEvents = 'none';
+    if (node.action) {
+        a.onclick = node.action;
+    } else if (url) {
+        if (newtab === TAB_OPEN_MODE.FOREGROUND) {
+            a.target = '_blank';
+        } else if (newtab === TAB_OPEN_MODE.BACKGROUND) {
+            a.onclick = () => {
+                openLink(node, newtab);
+                return false;
+            };
+        }
+        // Handle chrome:// and file:/// urls that need special opening
+        // Use charCodeAt for faster check than startsWith
+        const firstChar = url.charCodeAt(0);
+        if (firstChar === 99 || firstChar === 102) { // 'c' or 'f'
+            a.onclick = e => {
+                openLink(node, newtab || (e.ctrlKey ? TAB_OPEN_MODE.BACKGROUND : TAB_OPEN_MODE.CURRENT));
+                return false;
+            };
+            a.onauxclick = e => {
+                if (e.button === 1) {
+                    openLink(node, TAB_OPEN_MODE.BACKGROUND);
+                    return false;
+                }
+            };
+        }
+    } else if (!children) {
+        a.style.pointerEvents = 'none';
+    }
 
-	li.appendChild(a);
+    li.append(a); // Modern API
 
-	// folder
-	if (node.children) {
-		// render children
-		if (a.open || getConfig('remember_open') && localStorage.getItem('open.' + node.id)) {
-			setClass(a, node, true);
-			a.open = true;
-			getChildrenFunction(node)(function(result) {
-				renderAll(result, li);
-			});
-		}
+    // folder
+    if (children) {
+        // Store node ID for deferred loading (dataset may not exist in test env)
+        if (li.dataset) li.dataset.nodeId = id;
 
-		// click handlers
-		addFolderHandlers(node, a);
-		enableDragFolder(node, a);
+        // Check if this folder should auto-expand (show_root=false case)
+        if (node.autoExpand && a.dataset) {
+            a.dataset.autoExpand = 'true';
+        }
 
-	} else if (node.id == 'apps')
-		enableDragFolder(node, a);
+        // Check if folder should be open
+        const shouldBeOpen = a.open || (getConfig('remember_open') && localStorage.getItem(`open.${id}`));
+        if (shouldBeOpen) {
+            setClass(a, node, true);
+            a.open = true;
+            // If children are already loaded as an array, render them immediately
+            if (Array.isArray(children)) {
+                renderAll(children, li);
+            } else if (SpecialFolders.isSpecial(id)) {
+                // Special folders require slow Chrome API calls - defer loading
+                a.dataset.deferred = 'true';
+            } else {
+                // Regular bookmarks: fetch children from BookmarkCache (fast, in-memory)
+                (async () => {
+                    const folderChildren = await getChildren_internal(id);
+                    if (a.open && !a.nextSibling) {
+                        renderAll(folderChildren, li);
+                    }
+                })();
+            }
+        }
+        addFolderHandlers(node, a);
+        enableDragFolder(node, a);
+    }
 
-	target.appendChild(li);
-	return li;
+    target.append(li); // Modern API
+    return li;
 }
 
 // render an array of bookmark nodes
 function renderAll(nodes, target, toplevel) {
-	var ul = document.createElement('ul');
-	for (var i = 0; i < nodes.length; i++) {
-		var node = nodes[i];
-		// skip extensions and duplicated child folders
-		if (toplevel || !coords[node.id])
-			render(node, ul);
-	}
-	if (ul.childNodes.length === 0)
-		render({ id: 'empty', title: '< Empty >' }, ul);
-	if (toplevel)
-		target.appendChild(ul);
-	else {
-		// wrap child ul for animation
-		var wrap = document.createElement('div');
-		wrap.appendChild(ul);
-		target.appendChild(wrap);
-	}
-	updateTooltips();
-	return ul;
+    // Use DocumentFragment for batch DOM operations (faster than direct appends)
+    const fragment = document.createDocumentFragment();
+    const ul = document.createElement('ul');
+
+    for (let i = 0, len = nodes.length; i < len; i++) {
+        const node = nodes[i];
+        // skip extensions and duplicated child folders
+        if (toplevel || !coords[node.id]) render(node, ul);
+    }
+    // Use firstChild check instead of childNodes.length (faster)
+    if (!ul.firstChild) {
+        render({id: 'empty', title: '< Empty >'}, ul);
+    }
+    if (toplevel) {
+        fragment.append(ul);
+        target.append(fragment);
+    } else {
+        // wrap child ul for animation
+        const wrap = document.createElement('div');
+        wrap.append(ul);
+        fragment.append(wrap);
+        target.append(fragment);
+    }
+    updateTooltips();
+    return ul;
 }
 
 // render column with given index
-function renderColumn(index, target) {
-	var ids = columns[index];
-	if (ids.length == 1 && !getConfig('show_root'))
-		getChildrenFunction({id: ids[0]})(function(result) {
-			renderAll(result, target);
-			addColumnHandlers(index, target);
-		});
-	else if (ids.length > 0) {
-		var i = 0;
-		var nodes = [];
-		// get all nodes for column
-		var callback = function(result) {
-			for (var j = 0; j < result.length; j++)
-				nodes.push(result[j]);
-			i++;
-			if (i < ids.length)
-				getSubTree(ids[i], callback);
-			else {
-				// render node list
-				renderAll(nodes, target, true);
-				addColumnHandlers(index, target);
-			}
-		};
-		getSubTree(ids[i], callback);
-	}
+async function renderColumn(index, target) {
+    const ids = columns[index];
+    if (ids.length === 1 && !getConfig('show_root')) {
+        // Single folder with show_root=false: render children directly
+        const result = await getChildren({id: ids[0]});
+        renderAll(result, target);
+        addColumnHandlers(index, target);
+    } else if (ids.length > 0) {
+        const len = ids.length;
+        const promises = new Array(len);
+        for (let i = 0; i < len; i++) {
+            promises[i] = getSubTree(ids[i]);
+        }
+        const results = await Promise.all(promises);
+        // Flatten results with for loop (faster than flat())
+        const nodes = [];
+        for (let i = 0; i < len; i++) {
+            const arr = results[i];
+            for (let j = 0, jLen = arr.length; j < jLen; j++) {
+                nodes.push(arr[j]);
+            }
+        }
+        renderAll(nodes, target, true);
+        addColumnHandlers(index, target);
+    }
+}
+
+// Cached DOM element references (avoid repeated getElementById calls)
+let mainElement = null;
+
+function getMainElement() {
+    return mainElement ??= document.getElementById('main');
 }
 
 // render all columns to main div
-function renderColumns() {
-	// clear main div
-	var target = document.getElementById('main');
-	while (target.hasChildNodes())
-		target.removeChild(target.lastChild);
+async function renderColumns() {
+    const target = getMainElement();
+    target.replaceChildren(); // Modern way to clear children
 
-	// render columns
-	for (var i = 0; i < columns.length; i++) {
-		var column = document.createElement('div');
-		column.className = 'column';
-		column.style.width = (1 / columns.length) * 100 + '%';
+    // Create all column containers first (fast, synchronous)
+    const columnCount = columns.length;
+    const columnWidth = `${(1 / columnCount) * 100}%`;
+    const columnElements = new Array(columnCount);
+    for (let i = 0; i < columnCount; i++) {
+        const column = document.createElement('div');
+        column.className = 'column';
+        column.style.width = columnWidth;
+        enableDragColumn(i, column);
+        target.append(column);
+        columnElements[i] = column;
+    }
 
-		// enable drag and drop
-		enableDragColumn(i, column);
+    // Render all columns in parallel and wait for completion
+    const renderPromises = new Array(columnCount);
+    for (let i = 0; i < columnCount; i++) {
+        renderPromises[i] = renderColumn(i, columnElements[i]);
+    }
+    await Promise.all(renderPromises);
 
-		target.appendChild(column);
-		renderColumn(i, column);
-	}
+    enableDragDrop();
+}
 
-	enableDragDrop();
+// Expand special folders that were deferred during initial render
+// Special folders (top, recent, closed, devices) require slow Chrome API calls
+async function expandDeferredFolders() {
+    // Handle deferred special folders (marked with data-deferred="true")
+    const deferredLinks = document.querySelectorAll('#main a.folder[data-deferred="true"]');
+    const linkCount = deferredLinks.length;
+    if (linkCount === 0) return;
+
+    const promises = new Array(linkCount);
+    for (let i = 0; i < linkCount; i++) {
+        const a = deferredLinks[i];
+        promises[i] = (async () => {
+            const li = a.parentNode;
+            const nodeId = li?.dataset?.nodeId;
+            if (!nodeId || !a.open || a.nextSibling) return;
+
+            delete a.dataset.deferred;
+            const folderName = a.textContent || nodeId;
+            const children = await getChildren({id: nodeId, children: true}, folderName);
+            if (a.open && !a.nextSibling) {
+                renderAll(children, li);
+            }
+        })();
+    }
+
+    await Promise.all(promises);
 }
 
 // enables click and context menu for given folder
 function addFolderHandlers(node, a) {
-	// click handler
-	a.onclick = function() {
-		toggle(node, a, getChildrenFunction(node));
-		return false;
-	};
+    // click handler - Ctrl+click opens all bookmarks in folder
+    a.onclick = e => {
+        if (e.ctrlKey) {
+            openLinks(node);
+        } else {
+            toggle(node, a);
+        }
+        return false;
+    };
 
-	// context menu handler
-	var items = getMenuItems(node);
+    // middle-click opens all bookmarks in folder (must use mousedown to prevent auto-scroll)
+    a.onmousedown = e => {
+        if (e.button === 1) {
+            e.preventDefault();
+            openLinks(node);
+        }
+    };
 
-	// column layout items
-	if (!getConfig('lock')) {
-		items.push(null);// spacer
-		items.push({
-			label: 'Create new column',
-			action: function() {
-				addColumn([node.id]);
-			}
-		});
+    // context menu handler
+    const items = getMenuItems(node);
 
-		if (coords[node.id]) {
-			var pos = coords[node.id];
-			if (pos.y > 0)
-				items.push({
-					label: 'Move folder up',
-					action: function() {
-						addRow(node.id, pos.x, pos.y - 1);
-					}
-				});
-			if (pos.y < columns[pos.x].length - 1)
-				items.push({
-					label: 'Move folder down',
-					action: function() {
-						addRow(node.id, pos.x, pos.y + 2);
-					}
-				});
-			if (pos.x > 0)
-				items.push({
-					label: 'Move folder left',
-					action: function() {
-						addRow(node.id, pos.x - 1);
-					}
-				});
-			if (pos.x < columns.length - 1)
-				items.push({
-					label: 'Move folder right',
-					action: function() {
-						addRow(node.id, pos.x + 1);
-					}
-				});
-			if (root.indexOf(node.id) < 0)
-				items.push({
-					label: 'Remove folder',
-					action: function() {
-						removeRow(pos.x, pos.y);
-					}
-				});
-		}
-	}
+    // column layout items
+    if (!getConfig('lock')) {
+        items.push(null); // spacer
+        items.push({label: 'Create new column', action: () => addColumn([node.id])});
 
-	a.oncontextmenu = function(event) {
-		renderMenu(items, event.pageX, event.pageY);
-		return false;
-	};
+        const pos = coords[node.id];
+        if (pos && columns[pos.x]) {
+            if (pos.y > 0)
+                items.push({label: 'Move folder up', action: () => addRow(node.id, pos.x, pos.y - 1)});
+            if (pos.y < columns[pos.x].length - 1)
+                items.push({label: 'Move folder down', action: () => addRow(node.id, pos.x, pos.y + 2)});
+            if (pos.x > 0)
+                items.push({label: 'Move folder left', action: () => addRow(node.id, pos.x - 1)});
+            if (pos.x < columns.length - 1)
+                items.push({label: 'Move folder right', action: () => addRow(node.id, pos.x + 1)});
+            if (!rootSet?.has(node.id))
+                items.push({label: 'Remove folder', action: () => removeRow(pos.x, pos.y)});
+        }
+    }
+
+    a.oncontextmenu = e => {
+        renderMenu(items, e.pageX, e.pageY);
+        return false;
+    };
 }
 
 // enables context menu for given column
 function addColumnHandlers(index, ul) {
-	var items = [];
-	var ids = columns[index];
+    const ids = columns[index];
+    let items = ids.length === 1 ? getMenuItems({id: ids[0]}) : [];
 
-	// single folder items
-	if (ids.length == 1)
-		items = getMenuItems({id: ids[0]});
+    // column layout items
+    if (!getConfig('lock') && columns.length > 1) {
+        items.push(null); // spacer
+        if (index > 0)
+            items.push({label: 'Move column left', action: () => addColumn(ids, index - 1)});
+        if (index < columns.length - 1)
+            items.push({label: 'Move column right', action: () => addColumn(ids, index + 2)});
+        items.push({label: 'Remove column', action: () => removeColumn(index)});
+        if (ids.length === 1) {
+            if (index > 0)
+                items.push({label: 'Move folder left', action: () => addRow(ids[0], index - 1)});
+            if (index < columns.length - 1)
+                items.push({label: 'Move folder right', action: () => addRow(ids[0], index + 1)});
+        }
+    }
 
-	// column layout items
-	if (!getConfig('lock') && columns.length > 1) {
-		items.push(null);// spacer
-		if (index > 0)
-			items.push({
-				label: 'Move column left',
-				action: function() {
-					addColumn(ids, index - 1);
-				}
-			});
-		if (index < columns.length - 1)
-			items.push({
-				label: 'Move column right',
-				action: function() {
-					addColumn(ids, index + 2);
-				}
-			});
-		items.push({
-			label: 'Remove column',
-			action: function() {
-				removeColumn(index);
-			}
-		});
-		if (ids.length == 1) {
-			if (index > 0)
-				items.push({
-					label: 'Move folder left',
-					action: function() {
-						addRow(ids[0], index - 1);
-					}
-				});
-			if (index < columns.length - 1)
-				items.push({
-					label: 'Move folder right',
-					action: function() {
-						addRow(ids[0], index + 1);
-					}
-				});
-		}
-	}
-
-	if (items.length > 0)
-		ul.oncontextmenu = function(event) {
-			if (event.target.tagName == 'A' || event.target.parentNode.tagName == 'A')
-				return true;
-			renderMenu(items, event.pageX, event.pageY);
-			return false;
-		};
+    if (items.length > 0) {
+        ul.oncontextmenu = e => {
+            if (e.target.tagName === 'A' || e.target.parentNode.tagName === 'A') return true;
+            renderMenu(items, e.pageX, e.pageY);
+            return false;
+        };
+    }
 }
 
 // gets context menu items for given node
 function getMenuItems(node) {
-	var items = [];
-		items.push({
-			label: 'Open all links in folder',
-			action: function() {
-				openLinks(node);
-			}
-		});
-	if (node.id == 'closed')
-		items.push({
-			label: 'Clear browsing data',
-			action: function() {
-				openLink({ url: 'chrome://settings/clearBrowserData' }, 1);
-			}
-		});
-	if (node.id == 'devices')
-		items.push({
-			label: 'History',
-			action: function() {
-				openLink({ url: 'chrome://history' }, 1);
-			}
-		});
-	if (Number(node.id))
-		items.push({
-			label: 'Edit bookmarks',
-			action: function() {
-				openLink({ url: 'chrome://bookmarks/?id=' + node.id }, 1);
-			}
-		});
-	return items;
-}
-
-// wraps click handler for menu items
-function onMenuClick(item) {
-	return function() {
-		item.action();
-		return false;
-	};
+    const items = [{label: 'Open all links in folder', action: () => openLinks(node)}];
+    if (node.id === 'closed')
+        items.push({label: 'Clear browsing data', action: () => openLink({url: `chrome://settings/clearBrowserData`}, TAB_OPEN_MODE.FOREGROUND)});
+    if (node.id === 'devices')
+        items.push({label: 'History', action: () => openLink({url: `chrome://history`}, TAB_OPEN_MODE.FOREGROUND)});
+    if (+node.id > 0)
+        items.push({label: 'Edit bookmarks', action: () => openLink({url: `chrome://bookmarks/?id=${node.id}`}, TAB_OPEN_MODE.FOREGROUND)});
+    return items;
 }
 
 // renders a popup menu at given coordinates
 function renderMenu(items, x, y) {
-	var ul = document.createElement('ul');
-	ul.className = 'menu';
-	for (var i = 0; i < items.length; i++) {
-		var li = document.createElement('li');
-		if (items[i]) {
-			var a = document.createElement('a');
-			a.innerText = items[i].label;
-			a.tabIndex = 0;
-			a.onclick = onMenuClick(items[i]);
+    const ul = document.createElement('ul');
+    ul.className = 'menu';
 
-			li.appendChild(a);
-		} else if (i > 0 && i < items.length - 1)
-			li.appendChild(document.createElement('hr'));
-		else
-			continue;
+    // Use DocumentFragment to batch DOM operations
+    const fragment = document.createDocumentFragment();
+    const len = items.length;
+    const lastIndex = len - 1;
+    for (let i = 0; i < len; i++) {
+        const item = items[i];
+        if (!item) {
+            // Spacer - only add if not at start or end
+            if (i > 0 && i < lastIndex) {
+                const li = document.createElement('li');
+                li.append(document.createElement('hr'));
+                fragment.append(li);
+            }
+            continue;
+        }
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.textContent = item.label;
+        a.tabIndex = 0;
+        a.onclick = () => {
+            item.action();
+            return false;
+        };
+        li.append(a);
+        fragment.append(li);
+    }
+    ul.append(fragment);
 
-		ul.appendChild(li);
-	}
-	document.body.appendChild(ul);
-	ul.style.left = Math.max(Math.min(x, window.innerWidth + window.scrollX - ul.clientWidth), 0) + 'px';
-	ul.style.top = Math.max(Math.min(y, window.innerHeight + window.scrollY - ul.clientHeight), 0) + 'px';
-	ul.onmousedown = function(event) {
-		event.stopPropagation();
-		return true;
-	};
+    document.body.append(ul);
+    ul.style.left = `${Math.max(Math.min(x, window.innerWidth + window.scrollX - ul.clientWidth), 0)}px`;
+    ul.style.top = `${Math.max(Math.min(y, window.innerHeight + window.scrollY - ul.clientHeight), 0)}px`;
+    ul.onmousedown = e => {
+        e.stopPropagation();
+        return true;
+    };
 
-	setTimeout(function() {
-		document.onclick = function() {
-			closeMenu(ul);
-			return true;
-		};
-		document.onmousedown = function() {
-			closeMenu(ul);
-			return true;
-		};
-		document.oncontextmenu = function() {
-			closeMenu(ul);
-			return true;
-		};
-		document.onkeydown = function(event) {
-			if (event.keyCode == 27)
-				closeMenu(ul);
-			return true;
-		};
-	}, 20);
-	return ul;
+    setTimeout(() => {
+        const closeHandler = () => {
+            closeMenu(ul);
+            return true;
+        };
+        document.onclick = closeHandler;
+        document.onmousedown = closeHandler;
+        document.oncontextmenu = closeHandler;
+        document.onkeydown = e => {
+            if (e.key === 'Escape') closeMenu(ul);
+            return true;
+        };
+    }, 20);
+    return ul;
 }
 
 // removes the given popup menu
 function closeMenu(ul) {
-	document.body.removeChild(ul);
-	document.onclick = null;
-	document.onmousedown = null;
-	document.oncontextmenu = null;
-	document.onkeydown = null;
+    ul.remove();
+    document.onclick = null;
+    document.onmousedown = null;
+    document.oncontextmenu = null;
+    document.onkeydown = null;
 }
 
-var dragIds;
+let dragIds;
+let dropTarget;
 
 // enable drag and drop of column
 function enableDragColumn(id, column) {
-	if (getConfig('lock'))
-		return;
+    if (getConfig('lock')) return;
 
-	column.draggable = true;
-
-	column.ondragstart = function(event) {
-		dragIds = columns[id];
-		event.dataTransfer.effectAllowed = 'move';
-		this.classList.add('dragstart');
-	};
-	column.ondragend = function(event) {
-		dragIds = null;
-		this.classList.remove('dragstart');
-		clearDropTarget();
-	};
+    column.draggable = true;
+    column.ondragstart = e => {
+        dragIds = columns[id];
+        e.dataTransfer.effectAllowed = 'move';
+        column.classList.add('dragstart');
+    };
+    column.ondragend = () => {
+        dragIds = null;
+        column.classList.remove('dragstart');
+        clearDropTarget();
+    };
 }
-
-var dropTarget;
 
 // enable drag and drop of folder
 function enableDragFolder(node, a) {
-	if (getConfig('lock'))
-		return;
+    if (getConfig('lock')) return;
 
-	a.draggable = true;
-	a.ondragstart = function(event) {
-		dragIds = [node.id];
-		event.stopPropagation();
-		event.dataTransfer.effectAllowed = 'move copy';
-		this.classList.add('dragstart');
-	};
-	a.ondragend = function(event) {
-		dragIds = null;
-		this.classList.remove('dragstart');
-		clearDropTarget();
-	};
+    a.draggable = true;
+    a.ondragstart = e => {
+        dragIds = [node.id];
+        e.stopPropagation();
+        e.dataTransfer.effectAllowed = 'move copy';
+        a.classList.add('dragstart');
+    };
+    a.ondragend = () => {
+        dragIds = null;
+        a.classList.remove('dragstart');
+        clearDropTarget();
+    };
 }
 
 // init drag and drop handlers
 function enableDragDrop() {
-	var main = document.getElementById('main');
+    const main = getMainElement();
 
-	if (getConfig('lock')) {
-		main.ondragover = null;
-		main.ondragleave = null;
-		main.ondrop = null;
-		return;
-	}
+    if (getConfig('lock')) {
+        main.ondragover = main.ondragleave = main.ondrop = null;
+        return;
+    }
 
-	main.ondragover = function(event) {
-		event.preventDefault();
-		event.dataTransfer.dropEffect = 'move';
-		// highlight drop target
-		var target = getDropTarget(event);
-		if (target) {
-			clearDropTarget();
-			dropTarget = target;
-			var bordercss = 'solid 2px ' + getConfig('font_color');
-			if (target.tagName == 'LI' || target.tagName == 'UL') {
-				if (isAbove(event.pageY, target)) {
-					target.style.borderBottom = bordercss;
-					target.style.margin = '0 0 -2px 0';
-				} else {
-					target.style.borderTop = bordercss;
-					target.style.margin = '-2px 0 0 0';
-				}
-			} else if (target.className == 'column') {
-				if (event.pageX - target.offsetLeft > target.clientWidth / 2) {
-					target.style.borderRight = bordercss;
-					target.style.margin = '0';
-				} else {
-					target.style.borderLeft = bordercss;
-					target.style.margin = '0 2px 0 -2px';
-				}
-			}
-		}
-		return false;
-	};
+    main.ondragover = e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const target = getDropTarget(e);
+        if (target) {
+            clearDropTarget();
+            dropTarget = target;
+            const bordercss = `solid 2px ${getConfig('font_color')}`;
+            if (target.tagName === 'LI' || target.tagName === 'UL') {
+                if (isAbove(e.pageY, target)) {
+                    target.style.borderBottom = bordercss;
+                    target.style.margin = '0 0 -2px 0';
+                } else {
+                    target.style.borderTop = bordercss;
+                    target.style.margin = '-2px 0 0 0';
+                }
+            } else if (target.className === 'column') {
+                if (e.pageX - target.offsetLeft > target.clientWidth / 2) {
+                    target.style.borderRight = bordercss;
+                    target.style.margin = '0';
+                } else {
+                    target.style.borderLeft = bordercss;
+                    target.style.margin = '0 2px 0 -2px';
+                }
+            }
+        }
+        return false;
+    };
 
-	main.ondragleave = function(event) {
-		clearDropTarget();
-	};
+    main.ondragleave = () => clearDropTarget();
 
-	main.ondrop = function(event) {
-		event.stopPropagation();
+    main.ondrop = e => {
+        e.stopPropagation();
+        const target = getDropTarget(e);
+        if (!target) return false;
 
-		var target = getDropTarget(event);
-		if (!target)
-			return false;
+        let x = getDropX(target);
+        const y = getDropY(target, e);
 
-		// calculate drop coordinates
-		var x = getDropX(target, event);
-		var y = getDropY(target, event);
-
-		if (dragIds.length == 1 && y != null)
-			addRow(dragIds[0], x, y);
-		else {
-			if (event.pageX - target.offsetLeft > target.clientWidth / 2)
-				x++;
-			addColumn(dragIds, x);
-		}
-
-		return false;
-	};
+        if (dragIds.length === 1 && y != null) {
+            addRow(dragIds[0], x, y);
+        } else {
+            if (e.pageX - target.offsetLeft > target.clientWidth / 2) x++;
+            addColumn(dragIds, x);
+        }
+        return false;
+    };
 }
 
 // gets proper drop target element
 function getDropTarget(event) {
-	if (!dragIds)
-		return null;
-	var target = event.target;
-	if (target && (target.tagName == 'A' || target.parentNode.tagName == 'A') && dragIds.length == 1) {
-		// get parent folder until toplevel
-		while (target &&
-			target.parentNode.parentNode &&
-			target.parentNode.parentNode.className != 'column') {
-			// target should be LI
-			target = target.parentNode;
-		}
-		// if single-folder column, get the UL
-		if (target && target.tagName == 'LI' &&
-			columns[getDropX(target, event)].length == 1)
-			target = target.parentNode;
-		// target should be LI or UL by here...
-	} else
-		while (target && target.className != 'column')
-			target = target.parentNode;// target column
+    if (!dragIds) return null;
 
-	return target;
+    let target = event.target;
+    if (target && (target.tagName === 'A' || target.parentNode.tagName === 'A') && dragIds.length === 1) {
+        // get parent folder until toplevel
+        while (target?.parentNode?.parentNode?.className !== 'column') {
+            target = target.parentNode;
+        }
+        // if single-folder column, get the UL
+        if (target?.tagName === 'LI' && columns[getDropX(target)].length === 1) {
+            target = target.parentNode;
+        }
+    } else {
+        while (target && target.className !== 'column') {
+            target = target.parentNode;
+        }
+    }
+    return target;
 }
 
 // gets x coordinate of drop target
-function getDropX(target, event) {
-	var x = null;
-	while (target && target.className != 'column')
-		target = target.parentNode;
-	if (target) {
-		x = 0;
-		for (; target.previousSibling; x++)
-			target = target.previousSibling;
-	}
-	return x;
+function getDropX(target) {
+    while (target && target.className !== 'column') {
+        target = target.parentNode;
+    }
+    if (!target) return null;
+
+    // Use Array.prototype.indexOf for O(1) lookup instead of O(n) sibling traversal
+    return Array.prototype.indexOf.call(target.parentNode.children, target);
 }
 
 // gets y coordinate of drop target
 function getDropY(target, event) {
-	var y = null;
-	if (target.tagName == 'LI') {
-		y = 0;
-		if (isAbove(event.pageY, target))
-			y++;
-		for (; target.previousSibling; y++)
-			target = target.previousSibling;
-	} else if (target.tagName == 'UL') {
-		y = 0;
-		if (isAbove(event.pageY, target))
-			y++;
-	}
-	return y;
+    if (target.tagName !== 'LI' && target.tagName !== 'UL') return null;
+    let y = isAbove(event.pageY, target) ? 1 : 0;
+    if (target.tagName === 'LI') {
+        // Use Array.prototype.indexOf for O(1) lookup instead of O(n) sibling traversal
+        const siblings = target.parentNode.children;
+        y += Array.prototype.indexOf.call(siblings, target);
+    }
+    return y;
 }
 
 // returns true if y position is above target element midpoint
-function isAbove(pageY, target) {
-	return pageY - window.scrollY - target.getBoundingClientRect().top > target.clientHeight / 2;
-}
+const isAbove = (pageY, target) =>
+    pageY - window.scrollY - target.getBoundingClientRect().top > target.clientHeight / 2;
 
 // clears droptarget styles
 function clearDropTarget() {
-	if (dropTarget) {
-		dropTarget.style.border = null;
-		dropTarget.style.margin = null;
-	}
-	dropTarget = null;
+    if (dropTarget) {
+        Object.assign(dropTarget.style, {border: null, margin: null});
+    }
+    dropTarget = null;
 }
 
-var tooltipTimeout = null;
-// adds tootlips to truncated text
+let tooltipTimeout = null;
+
+// adds tooltips to truncated text - uses requestIdleCallback for non-blocking updates
 function updateTooltips() {
-	if (tooltipTimeout) clearTimeout(tooltipTimeout);
+    if (tooltipTimeout) {
+        if (typeof cancelIdleCallback !== 'undefined') {
+            cancelIdleCallback(tooltipTimeout);
+        } else {
+            clearTimeout(tooltipTimeout);
+        }
+    }
 
-	tooltipTimeout = setTimeout(function() {
-		tooltipTimeout = null;
-		var elements = document.querySelectorAll('#main li a');
-		for (var i = 0; i < elements.length; i++) {
-			var element = elements[i];
-			if (element.clientWidth + 1 < element.scrollWidth) {
-				element.title = element.title || element.textContent;
-			} else if (element.title === element.textContent) {
-				element.title = '';
-			}
-		}
-	}, 100);
+    const doUpdate = () => {
+        tooltipTimeout = null;
+        const links = document.querySelectorAll('#main li a');
+        for (let i = 0, len = links.length; i < len; i++) {
+            const el = links[i];
+            if (el.clientWidth + 1 < el.scrollWidth) {
+                if (!el.title) el.title = el.textContent;
+            } else if (el.title === el.textContent) {
+                el.title = '';
+            }
+        }
+    };
+
+    // Use requestIdleCallback if available for non-blocking updates
+    if (typeof requestIdleCallback !== 'undefined') {
+        tooltipTimeout = requestIdleCallback(doUpdate, {timeout: 500});
+    } else {
+        tooltipTimeout = setTimeout(doUpdate, 100);
+    }
 }
 
-// gets function that returns children of node
-function getChildrenFunction(node) {
-	switch(node.id) {
-		case 'top':
-			return function(callback) {
-				if (chrome.topSites)
-					chrome.topSites.get(function(result) {
-						callback(result.slice(0, getConfig('number_top')));
-					});
-				else
-					callback([]);
-			};
-		case 'recent':
-			return function(callback) {
-				chrome.bookmarks.getRecent(getConfig('number_recent'), function(result) {
-					callback(result);
-				});
-			};
-		case 'closed':
-			return function(callback) {
-				getClosed(function(result) {
-					callback(result);
-				});
-			};
-		case 'devices':
-			return function(callback) {
-				getDevices(function(result) {
-					callback(result);
-				});
-			};
-		default:
-			if (node.children)
-				return function(callback) {
-					callback(node.children);
-				};
-			else
-				return function(callback) {
-					chrome.bookmarks.getSubTree(node.id, function(result) {
-						if (result)
-							callback(result[0].children);
-						else {
-							// remove missing bookmark locations
-							if (coords[node.id])
-								removeRow(coords[node.id].x, coords[node.id].y);
-						}
-					});
-				};
-	}
+// Gets children of a node (returns Promise)
+async function getChildren(node, folderName) {
+    if (Array.isArray(node.children)) return node.children;
+
+    const children = await getChildren_internal(node.id);
+    if (!children && coords[node.id]) {
+        removeRow(coords[node.id].x, coords[node.id].y);
+    }
+    return children || [];
 }
 
 // gets the subtree for given id
-function getSubTree(id, callback) {
-	switch(id) {
-		case 'top':
-			callback([{ title: 'Most visited', id: 'top', children: true}]);
-			break;
-		case 'apps':
-			callback([{ title: 'Apps', id: 'apps', url: 'chrome://apps' }]);
-			break;
-		case 'recent':
-			callback([{ title: 'Recent bookmarks', id: 'recent', children: true }]);
-			break;
-		case 'closed':
-			callback([{ title: 'Recently closed', id: 'closed', children: true }]);
-			break;
-		case 'devices':
-			callback([{ title: 'Other devices', id: 'devices', children: true }]);
-			break;
-		default:
-			chrome.bookmarks.getSubTree(id, function(result) {
-				if (result)
-					callback(result);
-				else {
-					// remove missing bookmark locations
-					if (coords[id])
-						removeRow(coords[id].x, coords[id].y);
-				}
-			});
-	}
+async function getSubTree(id) {
+    const specialNode = SpecialFolders.getNode(id);
+    if (specialNode) return [specialNode];
+
+    const node = await getNode_internal(id);
+    if (node) {
+        // Mark as folder (children will be fetched on-demand)
+        node.children = true;
+        return [node];
+    }
+    if (coords[id]) removeRow(coords[id].x, coords[id].y);
+    return [];
 }
 
-// sets css classes for node
+// sets css classes for node - build class string directly
 function setClass(target, node, isopen) {
-	if (node.className)
-		target.classList.add(node.className);
-	if (node.children)
-		target.classList.add('folder');
-	if (isopen)
-		target.classList.add('open');
-	else
-		target.classList.remove('open');
-
-	switch(node.id) {
-		case 'top':
-		case 'apps':
-		case 'recent':
-		case 'closed':
-		case 'devices':
-		case 'empty':
-			target.classList.add(node.id);
-	}
+    let className = node.className || '';
+    if (node.children) className = className ? `${className} folder` : 'folder';
+    if (isopen) className = className ? `${className} open` : 'open';
+    if (SpecialFolders.isSpecial(node.id) || node.id === 'empty') {
+        className = className ? `${className} ${node.id}` : node.id;
+    }
+    if (className) target.className = className;
 }
 
 // gets best icon for a node
 function getIcon(node) {
-	var url = null,
-		url2x = null;
-	if (node.icons) {
-		var size;
-		for (var i in node.icons) {
-			var iconInfo = node.icons[i];
-			if (iconInfo.url && (!size || (iconInfo.size < size && iconInfo.size > 15))) {
-				url = iconInfo.url;
-				if (iconInfo.size > 31) url2x = iconInfo.url;
-				size = iconInfo.size;
-			}
-		}
-	} else if (node.icon) {
-		url = node.icon;
-	} else if (node.url) {
-		url = `/_favicon/?pageUrl=${encodeURIComponent(node.url)}&size=16`;
-		url2x = `/_favicon/?pageUrl=${encodeURIComponent(node.url)}&size=32`;
-	}
+    let url = null;
+    let url2x = null;
 
-	var icon = document.createElement(url ? 'img' : 'div');
-	icon.className = 'icon';
-	icon.src = url;
-	if (url2x) icon.srcset = url2x + ' 2x';
-	icon.alt = ' ';
-	return icon;
+    if (node.icons) {
+        let size;
+        // Use for-in loop for direct property iteration (no array allocation)
+        for (const key in node.icons) {
+            const iconInfo = node.icons[key];
+            if (iconInfo.url && (!size || (iconInfo.size < size && iconInfo.size > 15))) {
+                url = iconInfo.url;
+                if (iconInfo.size > 31) url2x = iconInfo.url;
+                size = iconInfo.size;
+            }
+        }
+    } else if (node.icon) {
+        url = node.icon;
+    } else if (node.url) {
+        const img = document.createElement('img');
+        img.className = 'icon';
+        img.alt = '';
+        img.width = 16;
+        img.height = 16;
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        img.src = Favicon.getUrl(node.url);
+        return img;
+    }
+
+    const icon = document.createElement(url ? 'img' : 'div');
+    icon.className = 'icon';
+    if (url) {
+        icon.loading = 'lazy';
+        icon.decoding = 'async';
+        icon.src = url;
+        if (url2x) icon.srcset = `${url2x} 2x`;
+        icon.alt = '';
+    }
+    return icon;
 }
 
 // toggle folder open state
-function toggle(node, a) {
-	var isopen = a.open;
-	setClass(a, node, !isopen);
-	a.open = !isopen;
-	if (isopen) {
-		// close folder
-		localStorage.removeItem('open.' + node.id);
-		if (a.nextSibling){
-			// auto-close child folders
-			if (getConfig('auto_close')) {
-				var children = (a.nextSibling.tagName == 'DIV' ? a.nextSibling.firstChild : a.nextSibling).children;
-				for (var i=0; i<children.length; i++) {
-					var child = children[i].firstChild;
-					if (child.open)
-						child.onclick();
-				}
-			}
-			// close folder
-			animate(node, a, isopen);
-		}
-	} else {
-		// open folder
-		localStorage.setItem('open.' + node.id, true);
-		// auto-close sibling folders
-		if (getConfig('auto_close')) {
-			var siblings = a.parentNode.parentNode.children;
-			for (var i=0; i<siblings.length; i++) {
-				var sibling = siblings[i].firstChild;
-				if (sibling != a && sibling.open)
-					sibling.onclick();
-			}
-		}
-		// open folder
-		if (a.nextSibling)
-			animate(node, a, isopen);
-		else
-			getChildrenFunction(node)(function(result) {
-				if (!a.nextSibling && a.open) {
-					renderAll(result, a.parentNode);
-					animate(node, a, isopen);
-				}
-			});
-	}
+async function toggle(node, a) {
+    const isopen = a.open;
+    setClass(a, node, !isopen);
+    a.open = !isopen;
+
+    const openKey = `open.${node.id}`;
+    const autoClose = getConfig('auto_close');
+    if (isopen) {
+        localStorage.removeItem(openKey);
+        if (a.nextSibling) {
+            if (autoClose) {
+                const wrapper = a.nextSibling.tagName === 'DIV' ? a.nextSibling.firstChild : a.nextSibling;
+                const wrapperChildren = wrapper.children;
+                for (let i = 0, len = wrapperChildren.length; i < len; i++) {
+                    const child = wrapperChildren[i].firstChild;
+                    if (child?.open) child.onclick();
+                }
+            }
+            animate(node, a, isopen);
+        }
+    } else {
+        localStorage.setItem(openKey, true);
+        if (autoClose) {
+            const siblings = a.parentNode.parentNode.children;
+            for (let i = 0, len = siblings.length; i < len; i++) {
+                const sibling = siblings[i].firstChild;
+                if (sibling !== a && sibling?.open) sibling.onclick();
+            }
+        }
+        if (a.nextSibling) {
+            animate(node, a, isopen);
+        } else {
+            const result = await getChildren(node);
+            if (!a.nextSibling && a.open) {
+                renderAll(result, a.parentNode);
+                animate(node, a, isopen);
+            }
+        }
+    }
 }
 
 // smoothly open or close folder
 function animate(node, a, isopen) {
-	// TODO: fix nested animations
-	// wrapper needed for inner height value
-	var wrap = a.nextSibling;
-	if (a.animationHandle) {
-		// clear last animation
-		clearTimeout(a.animationHandle);
-		a.animationHandle = null;
-	} else {
-		// start animation
-		wrap.style.height = isopen ? wrap.firstChild.clientHeight + 'px' : 0;
-		wrap.style.opacity = isopen ? 1 : 0;
-	}
-	// requestAnimationFrame twice to ensure at least one frame has passed
-	requestAnimationFrame(function() {
-		requestAnimationFrame(function() {
-			if (wrap) {
-				wrap.className = 'wrap';
-				wrap.style.height = isopen ? 0 : wrap.firstChild.clientHeight + 'px';
-				wrap.style.opacity = isopen ? 0 : 1;
-				wrap.style.pointerEvents = isopen ? 'none' : null;
-			}
-		});
-	});
+    // wrapper needed for inner height value
+    let wrap = a.nextSibling;
+    const inner = wrap.firstChild;
+    const wrapStyle = wrap.style;
+    if (a.animationHandle) {
+        clearTimeout(a.animationHandle);
+        a.animationHandle = null;
+    } else {
+        wrapStyle.height = isopen ? `${inner.clientHeight}px` : '0';
+        wrapStyle.opacity = isopen ? '1' : '0';
+    }
+    // requestAnimationFrame twice to ensure at least one frame has passed
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            if (wrap) {
+                wrap.className = 'wrap';
+                wrapStyle.height = isopen ? '0' : `${inner.clientHeight}px`;
+                wrapStyle.opacity = isopen ? '0' : '1';
+                wrapStyle.pointerEvents = isopen ? 'none' : '';
+            }
+        });
+    });
 
-	var duration = scale(getConfig('slide'), .2, 1) * 1000;
-	a.animationHandle = setTimeout(function() {
-		a.animationHandle = null;
-		if (isopen)
-			a.parentNode.removeChild(wrap);
-		else {
-			wrap.className = null;
-			wrap.removeAttribute('style');
-		}
-		wrap = null;
-	}, duration);
+    const duration = scale(getConfig('slide'), 0.2, 1) * 1000;
+    a.animationHandle = setTimeout(() => {
+        a.animationHandle = null;
+        if (isopen) {
+            wrap.remove();
+        } else {
+            wrap.className = '';
+            wrap.removeAttribute('style');
+        }
+        wrap = null;
+    }, duration);
 }
 
 // opens immediate children of given node in new tabs
-function openLinks(node) {
-	chrome.tabs.getCurrent(function(tab) {
-		getChildrenFunction(node)(function(result) {
-			for (var i = 0; i < result.length; i++)
-				openLink(result[i], 2);
-		});
-	});
+async function openLinks(node) {
+    const result = await getChildren(node);
+    for (let i = 0, len = result.length; i < len; i++) {
+        openLink(result[i], TAB_OPEN_MODE.BACKGROUND);
+    }
 }
 
 // opens given node
-function openLink(node, newtab) {
-	var url = node.url;
-	if (url) {
-		chrome.tabs.getCurrent(function(tab) {
-			if (newtab)
-				chrome.tabs.create({url: url, active: (newtab == 1), openerTabId: tab.id});
-			else
-				chrome.tabs.update(tab.id, {url: url});
-		});
-	}
+// mode: TAB.CURRENT, TAB.FOREGROUND, or TAB.BACKGROUND
+function openLink(node, mode) {
+    const {url} = node;
+    if (!url) return;
+    if (mode === TAB_OPEN_MODE.BACKGROUND) {
+        chrome.tabs.create({url, active: false});
+        return;
+    }
+    if (mode === TAB_OPEN_MODE.FOREGROUND) {
+        chrome.tabs.create({url, active: true});
+        return;
+    }
+    window.location.href = url;
 }
 
-var columns; // columns[x][y] = id
-var root; // root[] = id
-var coords; // coords[id] = {x:x, y:y}
-var special = ['apps', 'top', 'recent', 'closed', 'devices'];
+let columns; // columns[x][y] = id
+let root;    // root[] = id
+let rootSet; // Set for O(1) root lookups
+let coords;  // coords[id] = {x, y}
 
 // ensure root folders are included
 function verifyColumns() {
-	// default layout
-	if (columns.length === 0) {
-		columns.push([]);
-		columns.push(special.filter(function(a) {
-			return getConfig('show_' + a) != false;
-		}));
-	}
+    // default layout
+    if (columns.length === 0) {
+        columns.push([]);
+        const defaultColumn = [];
+        for (let i = 0, len = special.length; i < len; i++) {
+            const a = special[i];
+            if (getConfig(`show_${a}`)) defaultColumn.push(a);
+        }
+        columns.push(defaultColumn);
+    }
 
-	// find missing root items
-	var missing = root.slice(0);
-	for (var x = 0; x < columns.length; x++) {
-		for (var y = 0; y < columns[x].length; y++) {
-			var i = missing.indexOf(columns[x][y]);
-			if (i > -1)
-				missing.splice(i, 1);
-		}
-	}
+    // find missing root items - build existing set with nested loops (faster than flat())
+    const existing = new Set();
+    for (let x = 0, xLen = columns.length; x < xLen; x++) {
+        const col = columns[x];
+        for (let y = 0, yLen = col.length; y < yLen; y++) {
+            existing.add(col[y]);
+        }
+    }
+    const missing = [];
+    for (let i = 0, len = root.length; i < len; i++) {
+        const id = root[i];
+        if (!existing.has(id)) missing.push(id);
+    }
 
-	// add missing root items
-	var column = columns[0];
-	for (var i = 0; i < missing.length; i++) {
-		if (getConfig('show_' + missing[i]) != false)
-			column.push(missing[i]);
-	}
+    for (let i = 0, len = missing.length; i < len; i++) {
+        const id = missing[i];
+        if (getConfig(`show_${id}`)) {
+            columns[0].push(id);
+        }
+    }
 
-	// populate coordinate map
-	coords = {};
-	for (var x = 0; x < columns.length; x++) {
-		for (var y = 0; y < columns[x].length; y++) {
-			coords[columns[x][y]] = { x: x, y: y};
-		}
-		if (columns[x].length === 0) {
-			columns.splice(x, 1);
-			x--;
-		}
-	}
+    // populate coordinate map and remove empty columns
+    coords = {};
+    for (let x = columns.length - 1; x >= 0; x--) {
+        if (columns[x].length === 0) {
+            columns.splice(x, 1);
+        } else {
+            const col = columns[x];
+            for (let y = 0, len = col.length; y < len; y++) {
+                coords[col[y]] = {x, y};
+            }
+        }
+    }
+}
+
+// Show error message when cache is unavailable
+function showCacheError(error) {
+    const main = getMainElement();
+    main.replaceChildren(); // Modern way to clear children
+
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'cache-error';
+    errorDiv.innerHTML = `
+        <h2>⚠️ Could not load bookmarks</h2>
+        <p>The bookmark cache is not available. This usually means:</p>
+        <ul>
+            <li>The extension was just installed (wait a moment and refresh)</li>
+            <li>The service worker hasn't synced yet</li>
+            <li>There was an error syncing bookmarks</li>
+        </ul>
+        <p>Check the console for more details.</p>
+    `;
+    main.append(errorDiv);
+
+    console.error('[BookmarkCache] Cache unavailable:', error);
+    console.error('[BookmarkCache] Cache status:', cacheStatus);
+    console.error('[BookmarkCache] To debug: Open chrome://extensions, find this extension, and check the service worker logs');
 }
 
 // load columns from storage or default
-function loadColumns() {
-	columns = [];
-	for (var x = 0; ; x++) {
-		var row = [];
-		for (var y = 0; ; y++) {
-			var id = localStorage.getItem('column.' + x + '.' + y);
-			if (id) row.push(id); else break;
-		}
-		if (row.length > 0) columns.push(row); else break;
-	}
+async function loadColumns() {
+    // Load ALL data into memory cache FIRST (single IndexedDB read)
+    // This is faster than checking status first (which would be 2 separate reads)
+    // After this, getCacheStatus() will use the in-memory cache (instant)
+    try {
+        await BookmarkCache.loadAllData();
+    } catch (e) {
+        console.error('[BookmarkCache] loadAllData failed:', e);
+        showCacheError(e);
+        return;
+    }
 
-	if (root) {
-		verifyColumns();
-		renderColumns();
-	} else {
-		chrome.bookmarks.getTree(function(result) {
-			// init root nodes
-			var nodes = result[0].children;
-			root = special.slice(0);
+    // Check if bookmark cache is valid (uses in-memory cache now - instant)
+    const status = await checkCacheStatus();
+    if (!status.valid) {
+        console.error('[BookmarkCache] Cache not valid:', status);
+        showCacheError(cacheLoadError || new Error('Cache not initialized'));
+        return;
+    }
 
-			for (var i = 0; i < nodes.length; i++)
-				root.push(nodes[i].id);
+    columns = [];
+    forEachColumnEntry((x, y, id) => {
+        if (!columns[x]) columns[x] = [];
+        columns[x][y] = id;
+    });
 
-			verifyColumns();
-			renderColumns();
-		});
-	}
+    if (root) {
+        verifyColumns();
+        await renderColumns();
+    } else {
+        const rootIds = await getRootFolderIds();
+        // Build root array without concat (avoid intermediate array)
+        const specialLen = special.length;
+        const rootIdsLen = rootIds.length;
+        root = new Array(specialLen + rootIdsLen);
+        for (let i = 0; i < specialLen; i++) root[i] = special[i];
+        for (let i = 0; i < rootIdsLen; i++) root[specialLen + i] = rootIds[i];
+        // Build Set for O(1) lookups
+        rootSet = new Set(root);
+        verifyColumns();
+        await renderColumns();
+    }
+
+    // After first paint, expand deferred special folders (slow Chrome API calls)
+    if (typeof requestAnimationFrame !== 'undefined') {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(async () => {
+                await expandDeferredFolders();
+            });
+        });
+    }
 }
 
 // saves current column configuration to storage
 function saveColumns() {
-	// clear previous config
-	for (var x = 0; ; x++) {
-		for (var y = 0; ; y++) {
-			var id = localStorage.getItem('column.' + x + '.' + y);
-			if (id)
-				localStorage.removeItem('column.' + x + '.' + y);
-			else
-				break;
-		}
-		if (y === 0)
-			break;
-	}
-	verifyColumns();
-	// save new config
-	for (var x = 0; x < columns.length; x++) {
-		for (var y = 0; y < columns[x].length; y++) {
-			localStorage.setItem('column.' + x +'.' + y, columns[x][y]);
-		}
-	}
-	// refresh
-	loadColumns();
+    // clear previous config
+    forEachColumnEntry((x, y) => localStorage.removeItem(`column.${x}.${y}`));
+    verifyColumns();
+    // save new config
+    for (let x = 0, xLen = columns.length; x < xLen; x++) {
+        const col = columns[x];
+        for (let y = 0, yLen = col.length; y < yLen; y++) {
+            localStorage.setItem(`column.${x}.${y}`, col[y]);
+        }
+    }
+    loadColumns();
+}
+
+// removes ids from columns, returns adjusted {xpos, ypos} if provided
+function removeIdsFromColumns(ids, xpos, ypos) {
+    // Use Set for O(1) lookup instead of O(n) array includes
+    const idSet = new Set(ids);
+    for (let x = 0; x < columns.length; x++) {
+        for (let y = columns[x].length - 1; y >= 0; y--) {
+            if (idSet.has(columns[x][y])) {
+                columns[x].splice(y, 1);
+                if (xpos !== undefined && x === xpos && ypos > y) ypos--;
+            }
+        }
+        if (columns[x].length === 0) {
+            columns.splice(x, 1);
+            if (xpos !== undefined && xpos > x) xpos--;
+            x--;
+        }
+    }
+    return {xpos, ypos};
 }
 
 // creates and saves a new column
 function addColumn(ids, index) {
-	var column = ids.slice(0);
-	// remove previous locations
-	for (var x = 0; x < columns.length; x++) {
-		for (var y = 0; y < columns[x].length; y++ ) {
-			if (ids.indexOf(columns[x][y]) > -1) {
-				columns[x].splice(y, 1);
-				y--;
-			}
-		}
-	}
-	// insert new id
-	if (index == null)
-		index = columns.length;
-	columns.splice(Math.min(index, columns.length), 0, column);
-
-	// save
-	saveColumns();
+    removeIdsFromColumns(ids);
+    const insertAt = Math.min(index ?? columns.length, columns.length);
+    columns.splice(insertAt, 0, [...ids]);
+    saveColumns();
 }
 
 // removes given column
 function removeColumn(index) {
-	columns.splice(index, 1);
-	saveColumns();
+    columns.splice(index, 1);
+    saveColumns();
 }
 
 // creates and saves a new row
 function addRow(id, xpos, ypos) {
-	if (ypos == null)
-		ypos = columns[xpos].length;
-
-	// remove previous locations
-	for (var x = 0; x < columns.length; x++) {
-		var i = columns[x].indexOf(id);
-		if (i > -1) {
-			columns[x].splice(i, 1);
-			if (x == xpos && ypos > i)
-				ypos--;
-		}
-		if (columns[x].length === 0) {
-			columns.splice(x, 1);
-			x--;
-			if (xpos > x)
-				xpos--;
-		}
-	}
-	// insert new id
-	columns[xpos].splice(Math.min(ypos, columns[xpos].length), 0, id);
-
-	// save
-	saveColumns();
+    ypos = ypos ?? columns[xpos].length;
+    const adjusted = removeIdsFromColumns([id], xpos, ypos);
+    const insertAt = Math.min(adjusted.ypos, columns[adjusted.xpos].length);
+    columns[adjusted.xpos].splice(insertAt, 0, id);
+    saveColumns();
 }
 
 // removes given row
 function removeRow(xpos, ypos) {
-	columns[xpos].splice(ypos, 1);
-	saveColumns();
-}
-
-// get recently closed tabs
-function getClosed(callback) {
-	var maxResults = getConfig('number_closed');
-	chrome.sessions.getRecentlyClosed({ maxResults: maxResults }, function(sessions) {
-		var nodes = [];
-		for (var i = 0; i < sessions.length && i < maxResults; i++) {
-			(function(session) {
-				if (session.window && session.window.tabs.length == 1)
-					session.tab = session.window.tabs[0];
-
-				nodes.push({
-					title: session.tab ? session.tab.title : session.window.tabs.length + ' Tabs',
-					url: session.tab ? session.tab.url : null,
-					className: session.window ? 'window' : null,
-					action: function() {
-						chrome.sessions.restore(session.window ? session.window.sessionId : session.tab.sessionId, function(session) {
-							refreshClosed();
-						});
-						return false;
-					}
-				});
-			})(sessions[i]);
-		}
-		callback(nodes);
-	});
-}
-
-function getDevices(callback) {
-	chrome.sessions.getDevices({ maxResults: getConfig('number_closed') }, function(devices) {
-		var nodes = [];
-		for (var i = 0; i < devices.length; i++) {
-			(function(device) {
-				var children = [];
-				for (var j = 0; j < device.sessions.length; j++) {
-					var session = device.sessions[j];
-					var tabs = session.window ? session.window.tabs : [session.tab];
-					for (var k = 0; k < tabs.length; k++) {
-						children.push({
-							title: tabs[k].title,
-							url: tabs[k].url
-						});
-					}
-				}
-				nodes.push({
-					id: 'device.' + device.deviceName,
-					title: device.deviceName,
-					children: children
-				});
-			})(devices[i]);
-		}
-		callback(nodes);
-	});
+    columns[xpos].splice(ypos, 1);
+    saveColumns();
 }
 
 // refresh recently closed tab lists
 function refreshClosed() {
-	var targets = [];
-	var folders = document.getElementsByClassName('closed');
-	for (var i = 0; i < folders.length; i++) {
-		var a = folders[i];
-		if (a.nextSibling) {
-			a.parentNode.removeChild(a.nextSibling);
-			targets.push(a.parentNode);
-		}
-	}
-	if (folders.length === 0 && coords['closed']) {
-		var target = document.getElementsByClassName('column')[coords['closed'].x];
-		target.removeChild(target.firstChild);
-		targets.push(target);
-	}
+    const targets = [];
+    const folders = document.getElementsByClassName('closed');
 
-	getChildrenFunction({id: 'closed'})(function(result) {
-		for (var i = 0; i < targets.length; i++)
-			renderAll(result, targets[i]);
-	});
+    for (let i = 0, len = folders.length; i < len; i++) {
+        const a = folders[i];
+        if (a.nextSibling) {
+            a.nextSibling.remove();
+            targets.push(a.parentNode);
+        }
+    }
+
+    if (folders.length === 0 && coords.closed) {
+        const target = document.getElementsByClassName('column')[coords.closed.x];
+        target.firstChild.remove();
+        targets.push(target);
+    }
+
+    getChildren({id: 'closed'}).then(result => {
+        for (let i = 0, len = targets.length; i < len; i++) {
+            renderAll(result, targets[i]);
+        }
+    });
 }
 
 // options : default values
-var config = {
-	font: 'Sans-serif',
-	font_size: 16,
-	font_weight: 400,
-	theme: 'Default',
-	font_color: '#555555',
-	background_color: '#ffffff',
-	highlight_color: '#e4f4ff',
-	highlight_font_color: '#000000',
-	shadow_color: '#57b0ff',
-	background_image_file: '',
-	background_image: '',
-	background_align: 'left top',
-	background_repeat: 'repeat',
-	background_size: 'auto',
-	shadow_blur: 1,
-	highlight_round: 1,
-	fade: 1,
-	spacing: 1,
-	width: 1,
-	h_pos: 1,
-	v_margin: 1,
-	slide: 1,
-	hide_options: 0,
-	lock: 0,
-	show_top: 1,
-	show_apps: 1,
-	show_recent: 1,
-	show_closed: 1,
-	show_devices: 1,
-	show_root: 0,
-	newtab: 0,
-	remember_open: 1,
-	auto_close: 0,
-	auto_scale: 1,
-	css: '',
-	number_top: 10,
-	number_closed: 10,
-	number_recent: 10
+const config = {
+    font: 'Sans-serif',
+    font_size: 16,
+    font_weight: 400,
+    theme: 'Default',
+    font_color: '#555555',
+    background_color: '#ffffff',
+    highlight_color: '#e4f4ff',
+    highlight_font_color: '#000000',
+    shadow_color: '#57b0ff',
+    background_image_file: '',
+    background_image: '',
+    background_align: 'left top',
+    background_repeat: 'repeat',
+    background_size: 'auto',
+    shadow_blur: 1,
+    highlight_round: 1,
+    fade: 1,
+    spacing: 1,
+    width: 1,
+    h_pos: 1,
+    v_margin: 1,
+    slide: 1,
+    hide_options: 0,
+    lock: 0,
+    show_top: 1,
+    show_recent: 1,
+    show_closed: 1,
+    show_devices: 1,
+    show_root: 1,
+    newtab: 0,
+    remember_open: 1,
+    auto_close: 0,
+    auto_scale: 1,
+    css: '',
+    number_top: 10,
+    number_closed: 10,
+    number_recent: 10,
+    favicon_provider: 'duckduckgo'
 };
 
-// color theme values
-var themes = {
-	Default: {},
-	Classic: {
-		font_color: '#000000',
-		background_color: '#ffffff',
-		highlight_color: '#3399ff',
-		highlight_font_color: '#ffffff',
-		shadow_color: '#97cbff'
-	},
-	Dusk: {
-		font_color: '#c8b9be',
-		background_color: '#56546b',
-		highlight_color: '#494d5a',
-		highlight_font_color: '#ffd275',
-		shadow_color: '#000000'
-	},
-	Elegant: {
-		font_color: '#888888',
-		background_color: '#f6f6f6',
-		highlight_color: '#ffffff',
-		highlight_font_color: '#000000',
-		shadow_color: '#aaaaaa'
-	},
-	Frosty: {
-		font_color: '#3e5e82',
-		background_color: '#e4eef3',
-		highlight_color: '#0080c0',
-		highlight_font_color: '#ffffff',
-		shadow_color: '#8080ff'
-	},
-	Hacker: {
-		font_color: '#00ff00',
-		background_color: '#000000',
-		highlight_color: '#00ff00',
-		highlight_font_color: '#000000',
-		shadow_color: '#ff0000'
-	},
-	Melon: {
-		font_color: '#594526',
-		background_color: '#f8ffe1',
-		highlight_color: '#ff8000',
-		highlight_font_color: '#ffff80',
-		shadow_color: '#ff80c0'
-	},
-	Midnight: {
-		font_color: '#bfdfff',
-		background_color: '#101827',
-		highlight_color: '#000000',
-		highlight_font_color: '#80ecff',
-		shadow_color: '#0080ff'
-	},
-	Slate: {
-		font_color: '#555555',
-		background_color: '#b7babf',
-		highlight_color: '#aaaaaa',
-		highlight_font_color: '#000000',
-		shadow_color: '#2a2a2a'
-	},
-	Trees: {
-		font_color: '#cdd088',
-		background_color: '#566157',
-		highlight_color: '#4d674b',
-		highlight_font_color: '#ffff80',
-		shadow_color: '#183010'
-	},
-	Valentine: {
-		font_color: '#895fc2',
-		background_color: '#eae1ff',
-		highlight_color: '#ffb7f0',
-		highlight_font_color: '#f00000',
-		shadow_color: '#ffffff'
-	},
-	Warm: {
-		font_color: '#824100',
-		background_color: '#ffeedd',
-		highlight_color: '#fffae8',
-		highlight_font_color: '#800000',
-		shadow_color: '#d98764'
-	}
-};
-var theme = {};
+// themes is defined in themes.js (loaded before this script)
+let theme = {};
 
-// get config value or default
+// Config value cache - avoids repeated localStorage reads during rendering
+const configCache = new Map();
+
 function getConfig(key) {
-	var value = localStorage.getItem('options.' + key);
-	if (value != null)
-		return typeof config[key] === 'number' ? Number(value) : value;
-	else
-		return (theme.hasOwnProperty(key) ? theme[key] : config[key]);
+    // Use single get() call instead of has() + get() to avoid double lookup
+    const cached = configCache.get(key);
+    if (cached !== undefined) return cached;
+
+    const value = localStorage.getItem(`options.${key}`);
+    let result;
+    if (value != null) {
+        // Dynamic show_* keys (e.g., show_2, show_4) are numbers but not in config
+        const isShowKey = key.startsWith('show_');
+        const isNumber = typeof config[key] === 'number' || (isShowKey && !(key in config));
+        result = isNumber ? Number(value) : value;
+    } else {
+        result = key in theme ? theme[key] : config[key];
+    }
+    configCache.set(key, result);
+    return result;
 }
 
 // set config value
 function setConfig(key, value) {
-	if (value != null)
-		localStorage.setItem('options.' + key, typeof config[key] === 'number' ? Number(value) : value);
-	else {
-		localStorage.removeItem('options.' + key);
-		value = (theme.hasOwnProperty(key) ? theme[key] : config[key]);
-	}
-	// special case settings
-	if (key == 'lock' || key == 'newtab' || key == 'show_root' || key.substring(0,6) == 'number')
-		loadColumns();
-	else if (key == 'theme') {
-		theme = themes[value];
-		for (var i in config) {
-			if (i != key) {
-				onChange(i);
-				showConfig(i);
-			}
-		}
-	} else if (key.substring(0,4) == 'show') {
-		var id = key.substring(5);
-		if (!value) {
-			if (coords[id])
-				removeRow(coords[id].x, coords[id].y);
-			saveColumns();
-		} else {
-			saveColumns();
-		}
-	}
-	onChange(key, value);
-	return value;
+    // Invalidate cache for this key
+    configCache.delete(key);
+
+    const storageKey = `options.${key}`;
+    if (value != null) {
+        localStorage.setItem(storageKey, typeof config[key] === 'number' ? Number(value) : value);
+    } else {
+        localStorage.removeItem(storageKey);
+        value = key in theme ? theme[key] : config[key];
+    }
+
+    // special case settings
+    if (key === 'lock' || key === 'newtab' || key === 'show_root' || key.startsWith('number')) {
+        loadColumns();
+    } else if (key === 'theme') {
+        theme = themes[value];
+        configCache.clear(); // Theme affects all config defaults
+        const configKeys = Object.keys(config);
+        for (let i = 0, len = configKeys.length; i < len; i++) {
+            const k = configKeys[i];
+            if (k !== key) {
+                onChange(k);
+                showConfig(k);
+            }
+        }
+    } else if (key.startsWith('show')) {
+        const id = key.slice(5);
+        if (!value && coords[id]) {
+            removeRow(coords[id].x, coords[id].y);
+        }
+        saveColumns();
+    }
+
+    onChange(key, value);
+    return value;
 }
 
 // map config keys to styles
-var styles = {};
+const styles = {};
+
+// Style schema: maps config keys to CSS generation functions
+// Each function takes a value and returns a CSS string (or null to skip)
+const styleSchema = {
+    font: v => `#main a { font-family: "${v}"; }`,
+    font_size: v => `#main a { font-size: ${v / 10}em; }`,
+    font_weight: v => `#main a { font-weight: ${v}; }`,
+    font_color: v => `#main a { color: ${v}; }`,
+    background_color: v => `body { background-color: ${v}; }`,
+    background_image: v => `body { background-image: url(${v}); }`,
+    background_image_file: v => `body { background-image: url(${v}); }`,
+    background_align: v => `body { background-position: ${v}; }`,
+    background_repeat: v => `body { background-repeat: ${v}; }`,
+    background_size: v => `body { background-size: ${v}; }`,
+    highlight_font_color: v => `#main a:hover { color: ${v}; }`,
+    highlight_color: v => `#main a:hover { background-color: ${v}; }`,
+    shadow_color: v => `#main a:hover { box-shadow: 0 0 ${scale(getConfig('shadow_blur'), 7, 100)}px ${v}; }`,
+    shadow_blur: v => `#main a:hover { box-shadow: 0 0 ${scale(v, 7, 100)}px ${getConfig('shadow_color')}; }`,
+    highlight_round: v => `#main a { border-radius: ${scale(v, 0.2, 1.5)}em; }`,
+    fade: v => `#main a { transition-duration: ${scale(v, 0.2, 1)}s; }`,
+    slide: v => `.wrap { transition-duration: ${scale(v, 0.2, 1)}s; }`,
+    spacing: v => `#main a { line-height: ${scale(v, 2, 5.6, 0.8)}; padding-left: ${scale(v, 0.8, 2, 0.4)}em; padding-right: ${scale(v, 0.8, 2, 0.4)}em; }`,
+    width: v => `#main { width: ${getConfig('auto_scale') ? `${scale(v, 80, 100, 20)}%` : `${scale(v, 1000, 3000, 400)}px`}; }`,
+    h_pos: v => {
+        const margin = 100 - scale(getConfig('width'), 80, 100, 20);
+        return `#main { left: ${scale(v, 0, margin / 2, -margin / 2)}%; }`;
+    },
+    v_margin: v => `#main { margin-top: ${getConfig('auto_scale') ? `${scale(v, 5, 20)}%` : `${scale(v, 80, 600)}px`}; }`,
+    hide_options: () => '#options_button { opacity: 0; }',
+    css: v => v,
+    auto_scale: v => v ? null : '#main { margin-top: 80px; width: 1000px; }'
+};
 
 function getStyle(key, value) {
-	switch(key) {
-		case 'font':
-			return '#main a { font-family: "' + value + '"; }';
-		case 'font_size':
-			return '#main a { font-size: ' + (value / 10) + 'em; }';
-		case 'font_weight':
-			return '#main a { font-weight: ' + value + '; }';
-		case 'font_color':
-			return '#main a { color: ' + value + '; }';
-		case 'background_color':
-			return 'body { background-color: ' + value + '; }';
-		case 'background_image':
-			return 'body { background-image: url(' + value + '); }';
-		case 'background_image_file':
-			return 'body { background-image: url(' + value + '); }';
-		case 'background_align':
-			return 'body { background-position: ' + value + '; }';
-		case 'background_repeat':
-			return 'body { background-repeat: ' + value + '; }';
-		case 'background_size':
-			return 'body { background-size: ' + value + '; }';
-		case 'highlight_font_color':
-			return '#main a:hover { color: ' + value + '; }';
-		case 'highlight_color':
-			return '#main a:hover { background-color: ' + value + '; }';
-		case 'shadow_color':
-			return '#main a:hover { box-shadow: 0 0 ' + scale(getConfig('shadow_blur'), 7, 100) + 'px ' + value + '; }';
-		case 'shadow_blur':
-			return '#main a:hover { box-shadow: 0 0 ' + scale(value, 7, 100) + 'px ' + getConfig('shadow_color') + '; }';
-		case 'highlight_round':
-			return '#main a { border-radius: ' + scale(value, .2, 1.5) + 'em; }';
-		case 'fade':
-			return '#main a { transition-duration: ' + scale(value, .2, 1) + 's; }';
-		case 'slide':
-			return '.wrap { transition-duration: ' + scale(value, .2, 1) + 's; }';
-		case 'spacing':
-			return '#main a { line-height: ' + scale(value, 2, 5.6, .8) + '; ' +
-							'padding-left: ' + scale(value, .8, 2, .4) + 'em; ' +
-							'padding-right: ' + scale(value, .8, 2, .4) + 'em; }';
-		case 'width':
-			return '#main { width: ' + (getConfig('auto_scale') ?
-				scale(value, 80, 100, 20) + '%' :
-				scale(value, 1000, 3000, 400) + 'px') + '; }';
-		case 'h_pos':
-			var margin = 100 - scale(getConfig('width'), 80, 100, 20);
-			return '#main { left: ' + scale(value, 0, margin/2, -margin/2) + '%; }';
-		case 'v_margin':
-			return '#main { margin-top: ' + (getConfig('auto_scale') ?
-				scale(value, 5, 20) + '%' :
-				scale(value, 80, 600) + 'px') + '; }';
-		case 'hide_options':
-			return '#options_button { opacity: 0; }';
-		case 'css':
-			return value;
-		case 'auto_scale':
-			return value ? null : '#main { margin-top: 80px; width: 1000px; }';
-		default:
-			return null;
-	}
+    const fn = styleSchema[key];
+    return fn ? fn(value) : null;
 }
 
 // scales input value from [0,1,2] to [min,mid,max]
-function scale(value, mid, max, min) {
-	min = min || 0;
-	return value > 1 ?
-		mid + (value - 1) * (max - mid) :
-		min + value * (mid - min);
-}
-
-// gets rgb representation of hex color
-function hexToRgb(hex) {
-	hex = /[a-f\d]{6}/i.exec(hex);
-	var bigint = parseInt(hex, 16);
-	var r = (bigint >> 16) & 255;
-	var g = (bigint >> 8) & 255;
-	var b = bigint & 255;
-	return r + "," + g + "," + b;
+function scale(value, mid, max, min = 0) {
+    return value > 1
+        ? mid + (value - 1) * (max - mid)
+        : min + value * (mid - min);
 }
 
 // apply config value change
 function onChange(key, value) {
-	if (value == null)
-		value = getConfig(key);
+    value = value ?? getConfig(key);
 
-	if (value != config[key]) {
-		var css = getStyle(key, value);
-		if (css) {
-			var style;
-			if (styles.hasOwnProperty(key))
-				style = styles[key];
-			else {
-				style = document.createElement('style');
-				styles[key] = style;
-			}
-			document.head.appendChild(style);
+    if (value !== config[key]) {
+        const css = getStyle(key, value);
+        if (css) {
+            const style = styles[key] ?? (styles[key] = document.createElement('style'));
+            document.head.appendChild(style);
+            style.textContent = css;
+        }
+    } else if (key in styles) {
+        styles[key].remove();
+        delete styles[key];
+    }
 
-			// add style rules
-			style.innerText = css;
-		}
-	} else if (styles.hasOwnProperty(key)) {
-		// remove rules
-		styles[key].parentNode.removeChild(styles[key]);
-		delete styles[key];
-	}
-	// refresh dependent values
-	if (key == 'width')
-		onChange('h_pos');
-	else if (key == 'shadow_blur')
-		onChange('shadow_color');
-	else if (key == 'auto_scale') {
-		onChange('width');
-		onChange('v_margin');
-	}
+    // refresh dependent values
+    if (key === 'width') onChange('h_pos');
+    else if (key === 'shadow_blur') onChange('shadow_color');
+    else if (key === 'auto_scale') {
+        onChange('width');
+        onChange('v_margin');
+    }
 
-	// update options panel
-	if (!settingsInitialized)
-		return;
+    if (!settingsInitialized) return;
 
-	// show/hide default button
-	var input = document.getElementById('options_' + key);
-	if (input) {
-		var isDefault = value == (theme.hasOwnProperty(key) ? theme[key] : config[key]);
-		input.reset.style.visibility = (isDefault ? 'hidden' : null);
-		if (input.swatch)
-			input.swatch.value = value;
-	}
+    // show/hide default button
+    const input = document.getElementById(`options_${key}`);
+    if (input) {
+        const isDefault = value === (key in theme ? theme[key] : config[key]);
+        input.reset.style.visibility = isDefault ? 'hidden' : null;
+        if (input.swatch) input.swatch.value = value;
+    }
 }
 
 // loads config settings
 function loadSettings() {
-	// load theme
-	theme = themes[getConfig('theme')] || {};
-	// load settings
-	for (var key in config)
-		if (key === 'background_image_file')
-			setTimeout(function() { onChange('background_image_file'); }, 0);
-		else
-			onChange(key);
+    // Remove prevent-white-flash.js overrides so new settings can take effect
+    document.getElementById('early-styles')?.remove();
+    theme = themes[getConfig('theme')] ?? {};
+    const configKeys = Object.keys(config);
+    for (let i = 0, len = configKeys.length; i < len; i++) {
+        const key = configKeys[i];
+        if (key === 'background_image_file') {
+            setTimeout(() => onChange('background_image_file'), 0);
+        } else {
+            onChange(key);
+        }
+    }
 }
 
 // apply config values to input controls
 function showConfig(key) {
-	var input = document.getElementById('options_' + key);
-	if (!input || input.type === 'file')
-		return;
-
-	input[input.type === 'checkbox' ? 'checked' : 'value'] = getConfig(key);
+    const input = document.getElementById(`options_${key}`);
+    if (!input || input.type === 'file') return;
+    input[input.type === 'checkbox' ? 'checked' : 'value'] = getConfig(key);
 }
 
 // initialize config settings
 function initConfig(key) {
-	var input = document.getElementById('options_' + key);
-	if (!input)
-		return;
+    const input = document.getElementById(`options_${key}`);
+    if (!input) return;
 
-	if (input.type == 'color') {
-		input.type = 'text';
-		input.className = 'color';
-		var swatch = document.createElement('input');
-		swatch.type = 'color';
-		swatch.value = input.value;
-		swatch.oninput = function(event) {
-			input.value = this.value;
-			return input.onchange(event);
-		};
-		input.swatch = swatch;
-		input.parentNode.appendChild(swatch);
-	}
-	input.onchange = function(event) {
-		if (input.type == 'file') {
-			// load file
-			if (event.target.files.length == 1) {
-				var file = event.target.files[0];
-				if (file.size > 2097152) {
-					input.value = null;
-					alert('Image must be less than 2 MB.');
-					return false;
-				}
-				var reader = new FileReader();
-				reader.onload = function(f) {
-					if (f.target.result)
-						setConfig(key, f.target.result);
-				};
-				reader.readAsDataURL(file);
-			}
-		} else
-			setConfig(key, input.type == 'checkbox' ? Number(input.checked) : input.value);
-	};
+    if (input.type === 'color') {
+        input.type = 'text';
+        input.className = 'color';
+        const swatch = document.createElement('input');
+        swatch.type = 'color';
+        swatch.value = input.value;
+        swatch.oninput = e => {
+            input.value = swatch.value;
+            return input.onchange(e);
+        };
+        input.swatch = swatch;
+        input.parentNode.appendChild(swatch);
+    }
 
-	var reset = document.createElement('a');
-	reset.className = 'revert';
-	reset.title = 'Reset to default';
-	reset.tabIndex = 0;
-	reset.onclick = function() {
-		setConfig(key, null);
-		showConfig(key);
-		return false;
-	};
+    input.onchange = e => {
+        if (input.type === 'file') {
+            if (e.target.files.length === 1) {
+                const file = e.target.files[0];
+                if (file.size > 2097152) {
+                    input.value = null;
+                    alert('Image must be less than 2 MB.');
+                    return false;
+                }
+                const reader = new FileReader();
+                reader.onload = f => {
+                    if (f.target.result) setConfig(key, f.target.result);
+                };
+                reader.readAsDataURL(file);
+            }
+        } else {
+            setConfig(key, input.type === 'checkbox' ? Number(input.checked) : input.value);
+        }
+    };
 
-	input.reset = reset;
-	input.parentNode.appendChild(reset);
-	showConfig(key);
+    const reset = document.createElement('a');
+    reset.className = 'revert';
+    reset.title = 'Reset to default';
+    reset.tabIndex = 0;
+    reset.onclick = () => {
+        setConfig(key, null);
+        showConfig(key);
+        return false;
+    };
+
+    input.reset = reset;
+    input.parentNode.appendChild(reset);
+    showConfig(key);
 }
 
-var settingsInitialized = false;
+let settingsInitialized = false;
 
 // initialize options panel
 function initSettings() {
-	settingsInitialized = true;
+    settingsInitialized = true;
 
-	// options close button
-	document.getElementById('options_close_button').onclick = function() {
-		showOptions(false);
-		return false;
-	};
+    document.getElementById('options_close_button').onclick = () => {
+        showOptions(false);
+        return false;
+    };
 
-	// options submenu navigation
-	var options = document.getElementById('options');
-	var nav = document.getElementById('options_nav');
-	var index = 0;
-	for (var i=0; i<nav.children.length; i++) {
-		var a = nav.children[i].firstChild;
-		a.onclick = function(e) {
-			// clear current style
-			nav.children[index].firstChild.classList.remove('current');
-			options.getElementsByClassName('section')[index].classList.remove('current');
-			// apply new current style
-			index = Array.prototype.indexOf.call(nav.children, this.parentNode);
-			nav.children[index].firstChild.classList.add('current');
-			options.getElementsByClassName('section')[index].classList.add('current');
-			// show custom css on advanced tab
-			if (index === nav.children.length-1) {
-				var allcss = document.getElementById('all_css');
-				allcss.value = '';
-				for (var key in config) {
-					var css = (getStyle(key, getConfig(key)));
-					if (css && css.length < 1000 && key != 'css')
-						allcss.value += css + '\n';
-				}
-			}
-			// import/export
-			if (index === nav.children.length-2) {
-				var exports = document.getElementById('options_export');
-				var imports = document.getElementById('options_import');
-				var replacer = function(key, value) {
-					if (key == 'options.background_image_file' || key == 'weather.cache') {
-						return undefined;
-					}
-					return value;
-				};
-				exports.value = JSON.stringify(localStorage, replacer);
-				imports.value = '';
-				imports.placeholder = 'Paste exported settings here';
-				imports.onchange = function() {
-					try {
-						var imported = JSON.parse(imports.value);
-						for(var key in imported) {
-							localStorage.setItem(key, imported[key]);
-						}
-						imports.value = '';
-						imports.placeholder = 'Import successful!';
-						exports.value = JSON.stringify(localStorage, replacer);
-						loadSettings();
-						loadColumns();
-					} catch (e) {
-						imports.value = '';
-						imports.placeholder = 'Import error! Please check if your settings are valid JSON.';
-					}
-				};
-			}
-			return false;
-		};
-	}
+    const options = document.getElementById('options');
+    const nav = document.getElementById('options_nav');
+    let currentIndex = 0;
 
-	// add options to hide bookmark folders
-	chrome.bookmarks.getTree(function(result) {
-		var placeholder = document.getElementById('options_show_bookmarks');
-		var nodes = result[0].children;
-		for (var i = 0; i < nodes.length; i++) {
-			var key = 'show_' + nodes[i].id;
-			config[key] = 1;
+    const sections = Array.from(options.getElementsByClassName('section'));
+    const navChildren = Array.from(nav.children);
+    for (let i = 0, len = navChildren.length; i < len; i++) {
+        const a = navChildren[i].firstChild;
+        a.onclick = function () {
+            // clear current style
+            navChildren[currentIndex].firstChild.classList.remove('current');
+            sections[currentIndex].classList.remove('current');
 
-			var span = document.createElement('span');
-			span.innerText = nodes[i].title;
+            // apply new current style
+            currentIndex = i;
+            navChildren[currentIndex].firstChild.classList.add('current');
+            sections[currentIndex].classList.add('current');
 
-			var input = document.createElement('input');
-			input.type = 'checkbox';
-			input.id = 'options_' + key;
+            // show custom css on advanced tab
+            if (currentIndex === len - 1) {
+                const allcss = document.getElementById('all_css');
+                const configKeys = Object.keys(config);
+                const cssLines = [];
+                for (let j = 0, kLen = configKeys.length; j < kLen; j++) {
+                    const css = getStyle(configKeys[j], getConfig(configKeys[j]));
+                    if (css && css.length < 1000) cssLines.push(css);
+                }
+                allcss.value = cssLines.join('\n');
+            }
 
-			var label = document.createElement('label');
-			label.appendChild(span);
-			label.appendChild(input);
-			placeholder.appendChild(label);
-		}
+            // import/export
+            if (currentIndex === len - 2) {
+                const exports = document.getElementById('options_export');
+                const imports = document.getElementById('options_import');
+                const replacer = (k, v) =>
+                    (k === 'options.background_image_file' || k.startsWith('cache.')) ? undefined : v;
 
-		// replace text input with system font list
-		if (chrome.fontSettings) {
-			var input = document.getElementById('options_font');
-			var select = document.createElement('select');
-			input.parentNode.replaceChild(select, input);
-			select.id = input.id;
-		}
+                exports.value = JSON.stringify(localStorage, replacer);
+                imports.value = '';
+                imports.placeholder = 'Paste exported settings here';
+                imports.onchange = () => {
+                    try {
+                        const imported = JSON.parse(imports.value);
+                        localStorage.clear();
+                        const entries = Object.entries(imported);
+                        for (let i = 0, len = entries.length; i < len; i++) {
+                            const [k, v] = entries[i];
+                            localStorage.setItem(k, v);
+                        }
+                        imports.value = '';
+                        imports.placeholder = 'Import successful!';
+                        exports.value = JSON.stringify(localStorage, replacer);
+                        loadSettings();
+                        loadColumns();
+                        const configKeys = Object.keys(config);
+                        for (let i = 0, len = configKeys.length; i < len; i++) {
+                            showConfig(configKeys[i]);
+                        }
+                    } catch {
+                        imports.value = '';
+                        imports.placeholder = 'Import error! Please check if your settings are valid JSON.';
+                    }
+                };
+            }
+            return false;
+        };
+    }
 
-		// show settings
-		for (var key in config)
-			initConfig(key);
+    // add options to hide bookmark folders (load from cache)
+    BookmarkCache.getFolder('0').then(async rootFolder => {
+        const placeholder = document.getElementById('options_show_bookmarks');
+        const children = rootFolder?.children || [];
+        for (let i = 0, len = children.length; i < len; i++) {
+            const node = children[i];
+            if (!node.isFolder) continue;
 
-		loadSettings();
+            const key = `show_${node.id}`;
+            config[key] = 1;
 
-		// load themes
-		var select = document.getElementById('options_theme');
-		if (select.childNodes.length === 0) {
-			for (var i in themes) {
-				var option = document.createElement('option');
-				option.innerText = i;
-				if (i == getConfig('theme'))
-					option.selected = 'selected';
-				select.appendChild(option);
-			}
-		}
+            const span = document.createElement('span');
+            span.textContent = node.title;
 
-		// load font list
-		if (chrome.fontSettings) {
-			chrome.fontSettings.getFontList(function(fonts) {
-				var select = document.getElementById('options_font');
-				if (select.childNodes.length > 0)
-					return;
+            const input = document.createElement('input');
+            input.type = 'checkbox';
+            input.id = `options_${key}`;
 
-				fonts.unshift({ fontId: 'Sans-serif' });
-				for (var i = 0; i < fonts.length; i++) {
-					var font = fonts[i].fontId;
-					var option = document.createElement('option');
-					option.innerText = font;
-					if (font == getConfig('font'))
-						option.selected = 'selected';
-					select.appendChild(option);
-				}
-			});
-		}
-	});
+            const label = document.createElement('label');
+            label.append(span, input); // append multiple elements at once
+            placeholder.append(label);
+        }
+
+        // replace text input with system font list
+        if (chrome.fontSettings) {
+            const fontInput = document.getElementById('options_font');
+            const select = document.createElement('select');
+            select.id = fontInput.id;
+            fontInput.replaceWith(select); // Modern API
+        }
+
+        const configKeys = Object.keys(config);
+        for (let i = 0, len = configKeys.length; i < len; i++) {
+            initConfig(configKeys[i]);
+        }
+        loadSettings();
+
+        // load themes
+        const themeSelect = document.getElementById('options_theme');
+        if (themeSelect.childNodes.length === 0) {
+            const themeNames = Object.keys(themes);
+            const currentTheme = getConfig('theme');
+            for (let i = 0, len = themeNames.length; i < len; i++) {
+                const name = themeNames[i];
+                const option = document.createElement('option');
+                option.textContent = name;
+                option.selected = name === currentTheme;
+                themeSelect.append(option);
+            }
+        }
+
+        // load font list
+        if (chrome.fontSettings) {
+            const fonts = await chrome.fontSettings.getFontList();
+            const select = document.getElementById('options_font');
+            if (select.childNodes.length > 0) return;
+
+            const currentFont = getConfig('font');
+            // Add Sans-serif first
+            const defaultOption = document.createElement('option');
+            defaultOption.textContent = 'Sans-serif';
+            defaultOption.selected = 'Sans-serif' === currentFont;
+            select.append(defaultOption);
+            // Add remaining fonts
+            for (let i = 0, len = fonts.length; i < len; i++) {
+                const fontId = fonts[i].fontId;
+                const option = document.createElement('option');
+                option.textContent = fontId;
+                option.selected = fontId === currentFont;
+                select.append(option);
+            }
+        }
+
+        // Initialize Firefox favicon provider options (only show on Firefox)
+        if (Favicon.isFirefox) {
+            const firefoxOptions = document.getElementById('firefox_options');
+            if (firefoxOptions) firefoxOptions.style.display = '';
+
+            const providerSelect = document.getElementById('options_favicon_provider');
+            if (providerSelect && providerSelect.childNodes.length === 0) {
+                const providers = Favicon.getProviderList();
+                const currentProvider = getConfig('favicon_provider');
+                for (let i = 0, len = providers.length; i < len; i++) {
+                    const p = providers[i];
+                    const option = document.createElement('option');
+                    option.value = p.key;
+                    option.textContent = p.name;
+                    option.selected = p.key === currentProvider;
+                    providerSelect.append(option);
+                }
+            }
+        }
+    });
 }
 
 // show options panel
 function showOptions(show) {
-	document.getElementById('options').style.display = show ? 'block' : 'none';
-	if (show) {
-		if (!settingsInitialized)
-			initSettings();
-		for (var key in config)
-			showConfig(key);
-	}
+    document.getElementById('options').style.display = show ? 'block' : 'none';
+    if (show) {
+        if (!settingsInitialized) initSettings();
+        const configKeys = Object.keys(config);
+        for (let i = 0, len = configKeys.length; i < len; i++) {
+            showConfig(configKeys[i]);
+        }
+    }
 }
 
 // initialize page
@@ -1583,31 +1626,39 @@ loadSettings();
 loadColumns();
 
 // keyboard shortcuts
-document.addEventListener('keypress', function(event) {
-	if (event.keyCode == 13 && event.target && event.target.onclick && event.target.tagName == 'A') {
-		event.target.dispatchEvent(new MouseEvent('click'));
-		event.preventDefault();
-	}
-});
-document.addEventListener('mousedown', function(event) {
-	document.body.classList.add('hide-focus');
-});
-document.addEventListener('keydown', function(event) {
-	document.body.classList.remove('hide-focus');
+document.addEventListener('keypress', e => {
+    if (e.key === 'Enter' && e.target?.onclick && e.target.tagName === 'A') {
+        e.target.dispatchEvent(new MouseEvent('click'));
+        e.preventDefault();
+    }
 });
 
-window.onresize = function(event) {
-	updateTooltips();
-};
+document.addEventListener('mousedown', () => document.body.classList.add('hide-focus'), {passive: true});
+document.addEventListener('keydown', () => document.body.classList.remove('hide-focus'), {passive: true});
+
+window.onresize = updateTooltips;
 
 // load options panel
-document.getElementById('options_button').onclick = function() {
-	showOptions(true);
-	return false;
+document.getElementById('options_button').onclick = () => {
+    showOptions(true);
+    return false;
 };
-if (location.search === '?options')
-	showOptions(true);
+if (location.search === '?options') showOptions(true);
 
-// refresh recently closed
-if (chrome.sessions)
-	chrome.sessions.onChanged.addListener(refreshClosed);
+// Export for testing
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        TAB: TAB_OPEN_MODE,
+        getColumnIds: () => {
+            const ids = [];
+            forEachColumnEntry((x, y, id) => ids.push(id));
+            return ids;
+        },
+        getChildren_internal,
+        special,
+        expandDeferredFolders,
+        render,
+        renderAll,
+        openLink
+    };
+}
