@@ -301,3 +301,39 @@ input[type="file"]::-webkit-file-upload-button {
 #options_button {
 	background-image: -webkit-image-set(url("icons/options.png") 1x, url("icons/options@2x.png") 2x);
 }
+
+
+#sync_diagnostics {
+	min-width: 34em;
+}
+#sync_diagnostics input {
+	width: 18em;
+}
+#sync_diagnostics input.diagnostic-wide {
+	width: 24em;
+}
+#sync_diagnostics label {
+	min-height: 1.8em;
+}
+.diagnostic-actions {
+	margin: .8em 0 .6em 1.4em;
+	text-align: right;
+}
+.diagnostic-actions button {
+	margin: .2em 0 .2em .4em;
+}
+#sync_diagnostics .diagnostic-log-label {
+	margin-top: 1em;
+	text-align: left;
+}
+#sync_diagnostics .diagnostic-log-label span {
+	float: none;
+	display: block;
+}
+#dev_event_log {
+	float: none;
+	width: 100%;
+	height: 10em;
+	margin: .4em 0 0;
+	font-size: .85em;
+}

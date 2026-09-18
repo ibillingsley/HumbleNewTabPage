@@ -16,7 +16,8 @@
 		"topSites",
 		"tabs",
 		"fontSettings",
-		"sessions"
+		"sessions",
+		"storage"
 	],
 	"optional_host_permissions": [
 		"file:///"

@@ -133,8 +133,40 @@
 		<legend>Custom CSS</legend>
 		<label><textarea id="options_css"></textarea></label>
 	</fieldset>
+	<fieldset id="sync_diagnostics">
+		<legend>Sync diagnostics</legend>
+		<label><span>Version</span><input id="dev_version" type="text" value="Pending" readonly/></label>
+		<label><span>Storage backend</span><input id="dev_storage_backend" type="text" value="Initializing..." readonly/></label>
+		<label><span>Browser sync</span><input id="dev_sync_status" type="text" value="Initializing..." readonly/></label>
+		<label><span>Sync status</span><input id="dev_sync_health" type="text" value="Initializing..." readonly/></label>
+		<label><span>Device ID</span><input id="dev_device_id" type="text" value="Pending" readonly/></label>
+		<label><span>Layout revision</span><input id="dev_layout_revision" type="text" value="0" readonly/></label>
+		<label><span>Layout hash</span><input id="dev_layout_hash" type="text" value="Pending" readonly/></label>
+		<label><span>Last sync activity</span><input id="dev_last_sync" type="text" value="Never" readonly/></label>
+		<label><span>Last successful upload</span><input id="dev_last_upload" type="text" value="Never" readonly/></label>
+		<label><span>Last remote update</span><input id="dev_last_remote" type="text" value="Never" readonly/></label>
+		<label><span>Last remote device</span><input id="dev_remote_device" type="text" value="None" readonly/></label>
+		<label><span>Pending local changes</span><input id="dev_pending" type="text" value="No" readonly/></label>
+		<label><span>Remote layouts</span><input id="dev_remote_layouts" type="text" value="0" readonly/></label>
+		<label><span>Sync storage usage</span><input id="dev_storage_usage" type="text" value="Unknown" readonly/></label>
+		<label><span>Unresolved bookmarks</span><input id="dev_unresolved" type="text" value="0" readonly/></label>
+		<label><span>Layout backups</span><input id="dev_backup_status" type="text" value="0" readonly/></label>
+		<label><span>Detected conflicts</span><input id="dev_conflicts" type="text" value="0" readonly/></label>
+		<label><span>Last error</span><input id="dev_last_error" class="diagnostic-wide" type="text" value="None" readonly/></label>
+		<div class="diagnostic-actions">
+			<button id="dev_sync_now" type="button">Sync now</button>
+			<button id="dev_reload_remote" type="button">Reload remote state</button>
+			<button id="dev_restore_layout" type="button" disabled>Restore previous layout</button>
+			<button id="dev_copy_diagnostics" type="button">Copy diagnostics</button>
+		</div>
+		<label class="diagnostic-log-label"><span>Recent events (current tab)</span><textarea id="dev_event_log" readonly></textarea></label>
+	</fieldset>
 	</div>
 </div>
-<script src="newtab.js"></script>
+<script src="storage.js"></script>
+<script src="storage-bookmarks.js"></script>
+<script src="storage-sync.js"></script>
+<script src="storage-diagnostics.js"></script>
+<script src="storage-bootstrap.js"></script>
 </body>
 </html>
